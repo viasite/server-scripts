@@ -1,0 +1,313 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+
+# 02.07.2014
+# 12.11.2014
+# 07.03.2015
+# 23.03.2015 - --match-test, --name, removed required command
+# v 0.4
+
+import optparse
+from optparse import Option, OptionValueError
+import sh
+import os
+import tempfile
+import signal
+import sys
+from pprint import pprint
+import subprocess
+import atexit
+
+
+# for multi --test-match
+
+class MultipleOption(Option):
+
+    ACTIONS = Option.ACTIONS + ('extend', )
+    STORE_ACTIONS = Option.STORE_ACTIONS + ('extend', )
+    TYPED_ACTIONS = Option.TYPED_ACTIONS + ('extend', )
+    ALWAYS_TYPED_ACTIONS = Option.ALWAYS_TYPED_ACTIONS + ('extend', )
+
+    def take_action(
+        self,
+        action,
+        dest,
+        opt,
+        value,
+        values,
+        parser,
+        ):
+        if action == 'extend':
+            values.ensure_value(dest, []).append(value)
+        else:
+            Option.take_action(
+                self,
+                action,
+                dest,
+                opt,
+                value,
+                values,
+                parser,
+                )
+
+
+def main():
+    tests_root_path = '/usr/local/bin/drupal-tests/'
+    signal.signal(signal.SIGINT, signal_handler)
+    atexit.register(onexit)
+
+    usage = 'usage: %prog [options] "command or command_file_path"'
+    parser = optparse.OptionParser(usage=usage,
+                                   option_class=MultipleOption)
+
+    parser.set_defaults(
+        asroot=False,
+        quiet=False,
+        verbose=False,
+        test=False,
+        dir=False,
+        theme='',
+        number=0,
+        root_path_mask=None,
+        match_tests=[]
+        )
+
+    parser.add_option('-r', '--asroot', action='store_true',
+                      dest='asroot', help='Exec as root')
+
+    parser.add_option('-q', '--quiet', action='store_true', dest='quiet'
+                      , help="don't print status messages to stdout")
+
+    parser.add_option('-v', '--verbose', action='store_true',
+                      dest='verbose', help='Verbose')
+
+    parser.add_option('-n', type='int', dest='number',
+                      help='Only NUMBER first sites. 0 = all sites')
+
+    parser.add_option('--name', action='store', dest='root_path_mask',
+                      help='only matches by root_path')
+
+    parser.add_option('-m', '--match-test', action='extend',
+                      dest='match_tests',
+                      help='only matches if command output not empty string\ncommands from%s\nallowed multiple tests\nYou can use negative matchers, add "-" before command' % tests_root_path
+                      )
+
+    parser.add_option('--test', action='store_true', dest='test',
+                      help='Test exec, only first site')
+
+    parser.add_option('--theme', dest='theme',
+                      help='Only for sites with theme')
+
+
+    (options, args) = parser.parse_args()
+
+    options.tests_root_path = tests_root_path
+
+    command = None
+    if len(args) > 1:
+        parser.error('incorrect number of arguments')
+    if len(args) == 1:
+        command = args[0]
+
+    if options.test:
+        options.number = 1
+
+    drall = Drall(options, command)
+    drall.run()
+
+
+class Drall:
+
+    def __init__(self, options, command):
+        self.options = options
+        self.command = command
+
+
+    def run(self):
+
+    # it blocks file
+    # fd, command_file_path = tempfile.mkstemp(suffix="_drall", text=True);
+
+        site_list = self.get_drupals()
+
+        if not self.options.quiet:
+            print 'Found %d sites' % len(site_list)
+
+        if not self.command:
+            for site_root in site_list:
+                print site_root
+            return
+
+        command_file_path = self.build_command_file(self.command)
+
+        i = 0
+        for site_root in site_list:
+
+      # if isKilled:
+      #  break
+
+      # site_name = os.path.basename(site_root)
+      # site_name = site_root.decode('idna').encode('utf-8')
+
+            self.apply_command(site_root, command_file_path)
+
+            i += 1
+
+            if self.options.number != 0 and i >= self.options.number:
+                break
+
+        os.remove(command_file_path)
+
+    def build_command_file(self, command):
+        command_file_path = sh.mktemp(suffix='_drall').strip()
+
+        with open(command_file_path, 'w') as command_file:
+            command_file.write('#!/bin/bash\n' + command + '\n')
+        command_file.close()
+
+        os.chmod(command_file_path, 0755)
+        return command_file_path
+
+    def apply_command(self, site_root, command_file_path):
+        sh.cd(site_root)
+
+        if self.options.asroot:
+
+      # command_result = sh.Command('su -c "%s" %s' % (command_file_path, site_user)).run()
+
+            command_result = sh.Command(command_file_path).run()
+
+      # command_result = subprocess.call(command_file_path)
+
+            if not self.options.quiet:
+                print site_root
+            print command_result
+        else:
+
+      # su
+
+            site_user = sh.stat('-c', '%U', site_root).__str__()
+
+      # command_result = sh.su("-c", command, site_user)
+      # command_result = sh.Command('su -c "'+command+'" '+site_user.toString())
+      # command_result = sh.su("-c", command, site_user.__str__())
+
+      # command_result = sh.Command('su -c "%s" %s' % (command_file_path, site_user)).run()
+
+            try:
+                if not self.options.quiet:
+                    print site_root
+
+                exit_code = os.system('su -c "%s" %s'
+                        % (command_file_path, site_user))
+                print ''
+            except KeyboardInterrupt:
+
+        # p = subprocess.call('su -c %s %s' % (command_file_path, site_user))
+        # output, err = p.communicate()
+        # print output
+
+                sys.exit()
+
+    # command result
+      # print(command_result)
+
+    def get_drupals(self):
+        site_list = sh.Command('/root/bin/drupal-get-drupals'
+                               ).run().split()
+        if self.options.verbose:
+            print 'Found %s unfiltered sites' % len(site_list)
+
+        # filter by theme
+        if self.options.theme:
+            if self.options.verbose:
+                print 'Filter by theme'
+            site_list = [site_root for site_root in site_list
+                         if os.path.exists(site_root
+                         + '/sites/all/themes/' + self.options.theme)]
+
+        if self.options.root_path_mask:
+            site_list = [path for path in site_list
+                         if path.find(self.options.root_path_mask)
+                         != -1]
+
+        site_list_filtered = []
+        if self.options.match_tests:
+            if self.options.verbose:
+                print 'Filter by match tests:'
+            match_test_file_pathes = []
+            match_tests = [];
+            for match_test in self.options.match_tests:
+                negative = match_test[0] == '-'
+                if negative:
+                    match_test = match_test[1:]
+
+                found = sh.find(self.options.tests_root_path, '-type', 'f', '-name',
+                                match_test).strip(' \n\r')
+                if found:
+                    match_test = found
+                    if self.options.verbose:
+                        print 'Found script: %s' % found
+                else:
+                    if self.options.verbose:
+                        print 'Script "%s" not found, try use as command' % match_test
+
+                match_tests.append({
+                    'path': self.build_command_file(match_test),
+                    'negative': negative
+                })
+
+            for site_root in site_list:
+                if self.options.verbose:
+                    sys.stdout.write('.')
+                    sys.stdout.flush()
+
+                if self.test_site(site_root, match_tests):
+                    site_list_filtered.append(site_root)
+
+            if self.options.verbose:
+                print ''
+
+            for match_test in match_tests:
+                os.remove(match_test['path'])
+
+            site_list = site_list_filtered
+
+        if self.options.number:
+            if self.options.verbose:
+                print 'Filter by limit'
+            site_list = site_list[:self.options.number]
+
+        return site_list
+
+    def test_site(self, site_root, match_tests):
+        sh.cd(site_root)
+        for match_test in match_tests:
+            command_result = \
+                sh.Command(match_test['path']).run().strip(' \t\n\r')
+
+            is_match = True
+            if match_test['negative']:
+                is_match = not command_result or command_result == '0'
+            else:
+                is_match = command_result and command_result != '0'
+
+            if is_match:
+                True
+            else:
+                return False
+        return True
+
+
+def signal_handler(signal, frame):
+    sys.exit(0)
+
+
+def onexit():
+    None
+
+
+  # print "exit"
+
+if __name__ == '__main__':
+    main()
