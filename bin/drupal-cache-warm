@@ -1,0 +1,202 @@
+#!/bin/bash
+# 08.04.2015
+# v0.1
+# 
+
+VERBOSE=""
+QUIET=""
+DEBUG=""
+CACHE_AJAX="" # кешировать страницы еще и с ?ajax=1 дополнительно к тем, что есть в карте
+
+hits=0
+pages=0
+site_hits=0
+site_pages=0
+
+name_filter=""
+
+sitemap_temp=$(mktemp -t drupal-warm-cache-sitemap-XXXX)
+sitemap_temp2=$(mktemp -t drupal-warm-cache-sitemap-XXXX)
+root_paths_temp=$(mktemp -t drupal-warm-cache-root_paths-XXXX)
+trap 'rm -f "$sitemap_temp" "$sitemap_temp2" "$root_paths_temp"' EXIT
+
+
+usage() {
+	echo "drupal-cache-warm v0.1
+
+Использование: drupal-cache-warm mainpage
+               Прогрев главных страниц
+
+               drupal-cache-warm sitemap
+               Прогрев по sitemap.xml
+
+               drupal-cache-warm sitemap root_path
+               Прогрев по sitemap.xml конкретного сайта
+
+Выбирает с помощью drall сайты, собирает урлы, прогревает каждый.
+Берет только сайты с включенным кешем анонимов.
+
+Также проверяет, включен ли модуль xmlsitemap.
+Если sitemap.xml содержит ссылки на другие sitemap.xml, они будут обработаны рекурсивно.
+
+Если в cache_page рядов больше, чем в sitemap.xml, прогрев не будет начат.
+
+Чтобы был толк от прогрева, нужно ставить время жизни кеша на 3-24 часа, а прогрев - в cron на меньшее время.
+Нужно оставлять хотя бы 100% запас по времени между заданиями.
+То есть, если прогрев сайта с пустым кешем занимает 2 часа, надо ставить в cron раз в 4 часа.
+
+На выходе выдает cached_sites / scanned_sites
+
+Options:
+    -v Verbose mode, for test
+    -q Quiet mode, for cron
+"
+}
+
+
+warm_sitemaps() {
+	hits=0
+	sites=0
+	pages=0
+
+	[ -n "$DEBUG" ] && echo "Starting warm_sitemaps()"
+	[ -n "$DEBUG" ] && echo drall -q -m "if [ \"\$(drs module-enabled xmlsitemap)\" = 1 ]; then echo 1; fi" -m "cache" $name_filter
+
+	drall -q -m "if [ \"\$(drs module-enabled xmlsitemap)\" = 1 ]; then echo 1; fi" -m "cache" $name_filter > "$root_paths_temp"
+	[ -n "$VERBOSE" ] && echo "Found $(cat "$root_paths_temp" | wc -l) sites with sitemap.xml"
+
+	for root_path in $(cat "$root_paths_temp"); do
+		sites=$(( $sites + 1 ))
+		site_base="http://$(basename "$root_path")"
+		[ -z "$QUIET" ] && echo "$site_base"
+		
+		cd "$root_path"
+		drs urls sitemap > "$sitemap_temp"
+
+		# добавляем ?ajax=1 к каждой странице
+		if [ -n "$CACHE_AJAX" ]; then
+			[ -n "$VERBOSE" ] && echo "Append ?ajax=1 to url list"
+			> "$sitemap_temp2"
+			for url in $(cat "$sitemap_temp"); do
+				echo "$url?ajax=1" >> "$sitemap_temp2"
+			done
+			cat "$sitemap_temp2" >> "$sitemap_temp"
+		fi
+		urls_count=$(cat "$sitemap_temp" | wc -l)
+		
+		cache_page_count=$(drs table-count cache_page)
+
+		# if cache warmed, don't warm twice
+		if [ "$cache_page_count" -lt "$urls_count" ]; then
+			[ -z "$QUIET" ] && echo "Cache status: $cache_page_count / $urls_count"
+
+			#warm_pages "$sitemap_temp" | pv -l -s $urls_count >/dev/null
+			if [ -n "$VERBOSE" ]; then
+				warm_pages "$sitemap_temp" | pv -l -s "$urls_count"
+			else
+				warm_pages "$sitemap_temp"
+			fi
+			
+			[ -z "$QUIET" ] && echo "Total sitemaps hits: $site_hits / $site_pages in $site_base"
+		else
+			[ -z "$QUIET" ] && echo "Cache warmed $cache_page_count / $urls_count in $site_base"
+		fi
+	done
+
+	[ -z "$QUIET" ] && echo "Total sitemaps hits: $hits / $pages ($sites sites)"
+}
+
+
+warm_pages() {
+	site_hits=0
+	site_pages=0
+	urls_file="$1"
+	for url in $(cat "$urls_file"); do
+		#echo $url
+		warm_page "$url"
+	done
+
+}
+
+
+warm_page() {
+	url="$1"
+	headers=$(curl -s -I -L "$url")
+	hit=$(echo "$headers" | grep -c "X-Drupal-Cache: HIT")
+
+	#curl -s "$url" >/dev/null
+	#hit=0
+
+	hits=$(( $hits + $hit ))
+	pages=$(( $pages + 1 ))
+
+	site_hits=$(( $hits + $hit ))
+	site_pages=$(( $pages + 1 ))
+
+	[ -n "$VERBOSE" ] && echo "$hit $url"
+}
+
+
+warm_mainpages() {
+	hits=0
+	sites=0
+	pages=0
+	root_paths=$(drall -q -m "cache")
+
+	for root_path in $root_paths; do
+		sites=$(( $sites + 1 ))
+
+		cd "$root_path"
+		warm_page $(drs urls mainpage)
+	done
+
+	[ -z "$QUIET" ] && echo "Total mainpages hits: $hits / $pages (${sites} sites)"
+}
+
+
+
+
+main() {
+	if [ "$1" = "--help" ]; then
+		usage
+		exit 1
+	fi
+
+	while getopts ":adqv" opt; do
+		case "$opt" in
+			a) CACHE_AJAX="1"
+			#shift
+			;;
+			d) DEBUG="1"
+			VERBOSE=1
+			#shift
+			;;
+			q) QUIET="1"
+			#shift
+			;;
+			v) VERBOSE="1"
+			#shift
+			;;
+		esac
+	done
+
+	shift $((OPTIND - 1))
+
+	name_filter=""
+	if [ -n "$2" ]; then
+		[ -n "$DEBUG" ] && echo "name_filter: $2"
+		name_filter="--name=$2"
+	fi
+
+	if [ "$1" = "mainpage" ]; then
+		warm_mainpages
+		exit 0
+	fi
+
+	if [ "$1" = "sitemap" ]; then
+		warm_sitemaps
+		exit
+	fi
+}
+
+main "$@"

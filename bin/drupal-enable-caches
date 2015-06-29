@@ -1,0 +1,12 @@
+#!/bin/bash
+
+. $( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )/../lib/init
+use_config_var "DRUPAL_CACHE_LIFETIME"
+use_config_var "DRUPAL_PAGE_CACHE_MAXIMUM_AGE"
+
+drush vset cache 1
+drush vset preprocess_js 1
+drush vset preprocess_css 1
+[ -n "$DRUPAL_CACHE_LIFETIME" ] && drush vset cache_lifetime "$DRUPAL_CACHE_LIFETIME"
+[ -n "$DRUPAL_PAGE_CACHE_MAXIMUM_AGE" ] && drush vset page_cache_maximum_age "$DRUPAL_PAGE_CACHE_MAXIMUM_AGE"
+drush cc all

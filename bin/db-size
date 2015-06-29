@@ -1,0 +1,65 @@
+#!/bin/bash
+# 23.03.2015
+# v0.1
+# Без параметров складывает все размеры в файл-кеш, базы получает через drall
+# С параметром выдает размер базы из кеша, если в кеше нет - делает запрос
+
+# requires: drs
+
+. $( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )/../lib/init
+
+use_config_var "DB_SIZE_NAMES_FILE"
+use_config_var "DB_SIZE_SIZES_FILE"
+use_config_var "DB_SIZE_CACHE_MINS"
+
+dbs=""
+
+db_name="$1"
+
+function get_dbs_sizes {
+	dbs="$1"
+	# --delimiter=" "
+	mysql -Brs --execute="SELECT table_schema as db, ROUND(SUM(data_length + index_length) / 1024 / 1024, 0) as db_size \
+	FROM information_schema.tables \
+	WHERE table_schema in($dbs) \
+	AND table_name NOT LIKE 'cache_%' \
+	GROUP BY table_schema"
+}
+
+function get_db_size {
+	db_name="$1"
+	db_size=$(grep -P "^$db_name\t" "$DB_SIZE_SIZES_FILE" | tr '\t' ' ' | cut -d' ' -f2)
+	echo "$db_size"
+}
+
+
+if [ -n "$db_name" ]; then
+	#echo "get db '$db_name'"
+	db_size=$(get_db_size "$db_name")
+	if [ "$db_size" != "" ]; then
+		echo "$db_size"
+	else
+		dbs="'$db_name'"
+		db_size=$(get_dbs_sizes "$dbs" | tr '\t' ' ' | cut -d' ' -f2)
+		#get_dbs_sizes "$dbs"
+		echo "$db_size"
+	fi
+
+else
+	if [ ! -f "$DB_SIZE_SIZES_FILE" ] || [ $(find "$DB_SIZE_SIZES_FILE" -mmin -${DB_SIZE_CACHE_MINS} | wc -l) = "0" ]; then
+		#echo "sql for all dbs"
+
+		mkdir -p "${DB_SIZE_NAMES_FILE%/*}" "${DB_SIZE_SIZES_FILE%/*}"
+
+		drall "drs database-settings database" -q > "$DB_SIZE_NAMES_FILE"
+		for db_name_temp in $(cat "$DB_SIZE_NAMES_FILE"); do
+			if [ "$dbs" != "" ]; then dbs="$dbs,"; fi
+			dbs="$dbs'$db_name_temp'"
+		done
+
+		> "$DB_SIZE_SIZES_FILE"
+		get_dbs_sizes "$dbs" >> "$DB_SIZE_SIZES_FILE"
+		exit 0
+	fi
+	#cat "$DB_SIZE_SIZES_FILE"
+fi

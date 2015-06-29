@@ -1,0 +1,35 @@
+#!/bin/bash
+# all
+MAILTO="popstas@gmail.com"
+
+# dbdump, dbundump
+DB_BACKUPS_ROOT="/var/backups/sql"
+DB_BACKUPS_LOG="/var/log/mysql_backup.log"
+DB_BACKUPS_SEND_HOUR="17"
+DB_BACKUPS_RSYNC_DEST="root@mysql_backup:/var/backups/sql"
+DB_BACKUPS_EXCLUDED_DBS="_test$"
+#DB_BACKUPS_ROOT="/tmp/server-scripts/backups/sql"
+
+# db-size
+DB_SIZE_NAMES_FILE="/root/log/drupal_dbs.log"
+DB_SIZE_SIZES_FILE="/root/log/drupal_dbs_sizes.log"
+DB_SIZE_CACHE_MINS=30
+
+# detect-viruses
+VIRUSES_LOG="/var/log/viruses.log"
+VIRUSES_PHP_SIGNATURES="eval(base64_decode\|'base'.(32*2\|eval(stripslashes\|FilesMan\|WSO_VERSION\|$sF=\"PCT4BA6ODSE_\"\|$qV=\"stop_\""
+VIRUSES_JS_SIGNATURES="document.write(unescape"
+
+# drupal-enable-caches
+DRUPAL_CACHE_LIFETIME=300
+DRUPAL_PAGE_CACHE_MAXIMUM_AGE=1800
+
+# drupal-get-drupals
+DRUPAL_ROOT_LEVEL=4 # for /home/user/www/example.com
+DRUPAL_EXCLUDED_FILE=".excluded"
+
+# get-password
+PASSWORD_LENGTH=12
+
+# ssh-add-keys
+SSH_PUBLIC_KEYS_DIR="/root/ssh-public-keys"

@@ -1,0 +1,72 @@
+#!/bin/bash
+# v0.2
+# 05.12.2014
+ 
+. $( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )/../lib/init
+use_config_var "SSH_PUBLIC_KEYS_DIR"
+
+if [ ! -d "$SSH_PUBLIC_KEYS_DIR" ]; then
+	echo >&2 "SSH public keys directory '$SSH_PUBLIC_KEYS_DIR' not exists"
+	exit 1
+fi
+
+if [ $# != 1 ]; then
+	echo "Usage: $0 sshuser (для одного)"
+	echo "       $0 all (для всех)"
+	echo "Берет все ключи из папки $SSH_PUBLIC_KEYS_DIR и разрешает им доступ к юзеру"
+	exit
+fi
+
+user="$1"
+
+# all ssh users
+# 
+if [ "$user" = "all" ]; then
+	#for user in $(find /home -mindepth 2 -maxdepth 2 -name ".ssh" | sed 's/\/home\///g' | sed 's/\/.ssh//g')
+	for user in $(find /home -mindepth 2 -maxdepth 3 -name ".ssh" | sed 's/\/home\///g' | sed 's/\/.ssh//g')
+	do
+		#echo $0 $user
+		$0 $user
+	done
+
+	exit 0
+fi
+
+
+
+# one ssh user
+# 
+homedir=$(su -c "echo \$HOME" "$user")
+if [ ! -d "$homedir" ]; then
+	echo "'$homedir' not exist!"
+	exit 1
+fi
+
+temp_file=$(mktemp -t ssh-add-keys-XXXX)
+trap 'rm -f "$temp_file"' EXIT
+
+find "$SSH_PUBLIC_KEYS_DIR" -type f -exec cat {} >> "$temp_file" \;
+
+sshfile="${homedir}/.ssh/authorized_keys"
+if [ ! -f $sshfile ]; then
+	mkdir -p "${homedir}/.ssh"
+	touch "$sshfile"
+	chmod 600 "$sshfile"
+	chown $user:$user "$sshfile"
+fi
+
+while read key; do
+	if [ -z "$key" ]; then
+		continue
+	fi
+
+	res=$(grep -HcF "$key" "$sshfile" | grep -v ":0" | wc -l)
+	#echo $res
+	
+	if [ "$res" != "0" ]; then
+		echo key exists
+	else
+		echo add key to $user
+		echo "$key" >> "$sshfile"
+	fi
+done < "$temp_file"

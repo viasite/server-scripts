@@ -1,0 +1,83 @@
+#!/bin/bash
+# 03.01.2015
+# v0.2 - добавлен линк на последний бекап
+# v0.3 - некоторые таблицы кэша друпала добавляются в дамп без данных (только структура)
+
+# Запрос для определения тяжелых таблиц:
+# SELECT Sum(Round((data_length + index_length) / 1024 / 1024, 0)), TABLE_NAME FROM `information_schema`.`TABLES`
+# GROUP BY TABLE_NAME
+# ORDER BY Sum(Round((data_length + index_length) / 1024 / 1024, 0)) DESC
+# LIMIT 100
+
+
+. $( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )/../lib/init
+use_config_var "DB_BACKUPS_ROOT"
+
+if [ $# != "1" ]; then
+	echo 'Usage: $0 database'
+	exit 1
+fi
+
+if [ ! -d "$DB_BACKUPS_ROOT" ]; then
+	echo >&2 "backups root \"$DB_BACKUPS_ROOT\" not found"
+	exit 1
+fi
+
+DBNAME="$1"
+LAST_DIR="$DB_BACKUPS_ROOT/last"
+DIR="$DB_BACKUPS_ROOT/$(date +%Y)/$(date +%m)/$(date +%d)/$DBNAME"
+FILE="$DIR/$(date +%F_%T).gz"
+
+if [ ! -d "$DIR" ]; then
+	mkdir -p "$DIR"
+fi
+
+# check database exists
+exists=$(mysql -Brs --execute="SHOW DATABASES LIKE '$DBNAME'" | grep -cx "$DBNAME")
+if [ "$exists" -eq 0 ]; then
+	echo >&2 "$DBNAME not exists"
+	exit 1
+fi
+
+#echo "backup database $DBNAME..."
+# старый вариант - полный дамп всех таблиц
+# mysqldump "$DBNAME" | gzip > "$FILE"
+
+# полный дамп всех, кроме некоторых таблиц кэша
+mysqldump "$DBNAME" \
+--ignore-table="$DBNAME".cache \
+--ignore-table="$DBNAME".cache_entity_commerce_product \
+--ignore-table="$DBNAME".cache_field \
+--ignore-table="$DBNAME".cache_form \
+--ignore-table="$DBNAME".cache_menu \
+--ignore-table="$DBNAME".cache_metatag \
+--ignore-table="$DBNAME".cache_page \
+--ignore-table="$DBNAME".cache_path \
+--ignore-table="$DBNAME".cache_views \
+--ignore-table="$DBNAME".cache_views_data \
+ 2>/dev/null | gzip > "$FILE"
+
+# дамп без данных (структура) некоторых таблиц кэша
+mysqldump "$DBNAME" cache --no-data 2>/dev/null | gzip >> "$FILE"
+mysqldump "$DBNAME" cache_entity_commerce_product --no-data 2>/dev/null | gzip >> "$FILE"
+mysqldump "$DBNAME" cache_field --no-data 2>/dev/null | gzip >> "$FILE"
+mysqldump "$DBNAME" cache_form --no-data 2>/dev/null | gzip >> "$FILE"
+mysqldump "$DBNAME" cache_menu --no-data 2>/dev/null | gzip >> "$FILE"
+mysqldump "$DBNAME" cache_metatag --no-data 2>/dev/null | gzip >> "$FILE"
+mysqldump "$DBNAME" cache_page --no-data 2>/dev/null | gzip >> "$FILE"
+mysqldump "$DBNAME" cache_path --no-data 2>/dev/null | gzip >> "$FILE"
+mysqldump "$DBNAME" cache_views --no-data 2>/dev/null | gzip >> "$FILE"
+mysqldump "$DBNAME" cache_views_data --no-data 2>/dev/null | gzip >> "$FILE"
+
+##echo "/root/bin/dbundump $FILE $DBNAME"
+
+if [ ! -d "$LAST_DIR" ]; then
+	mkdir -p "$LAST_DIR"
+fi
+LAST_LINK="$LAST_DIR/$DBNAME.gz"
+LAST_FILE=$(ls -l "$LAST_LINK" | cut -d' ' -f12)
+
+ln -s -f "$FILE" "$LAST_LINK"
+
+echo "$FILE"
+#sleep 3

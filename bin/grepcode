@@ -1,0 +1,52 @@
+#!/bin/bash
+if [ "$1" = '--help' ] || [ $# != 1 ]; then
+	echo Usage:
+	echo $0 \"search text\"
+	#echo $0 \"search text\" all
+	#echo $0 \"search text\" "php js"
+	exit 1
+fi
+
+istest=0
+exts_all="php module info inc js json css hml html xml htaccess"
+exts_default="php module inc js"
+exts="$exts_default"
+
+#if [ $# -ge 2 ]; then
+#	exts="$2"
+#	if [ "$2" = "all" ]; then
+#		exts="$exts_all"
+#	fi
+#fi
+
+IFS=', ' read -a array <<< "$exts"
+
+exts_find=""
+isfirst=1
+
+echo text = \"$1\"
+echo exts = \"$exts\"
+for ext in "${array[@]}"
+do
+    if [ $isfirst = "0" ];then
+    	exts_find="$exts_find -o"
+    else
+    	exts_find=" "
+    fi
+    isfirst=0
+    exts_find="$exts_find -name \"*.$ext\""
+done
+
+command="grep \"$1\" \`find -type f$exts_find\`"
+
+find_file=$(mktemp -t grepcode-find-XXXX)
+grep_file=$(mktemp -t grepcode-grep-XXXX)
+trap 'rm -f "$find_file" "$grep_file"' EXIT
+
+echo find files...
+# зависает, если подставить $exts_find в команду, поэтому выбора типов не будет
+time ionice -c3 find . -type f -name "*.php" -o -name "*.module" -o -name "*.inc" -o -name "*.js" > "$find_file"
+echo found $(cat "$find_file" | wc -l). grep...
+time grep -c "$1" $(cat "$find_file") > "$grep_file"
+cat "$grep_file" | grep -v ":0"
+

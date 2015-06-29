@@ -1,0 +1,31 @@
+#!/bin/bash
+# Сравнение файлов, работает как cp-chown, выдает кол-во различающихся строк примерно, если разницы нет, выдает ноль
+# 
+# v0.1
+# 
+# 23.03.2015
+#
+
+function usage(){
+	echo "Usage: $0 dir_source dir_target file"
+	exit 1
+}
+
+if [ $# != 3 ]; then
+	usage
+fi
+
+function drupal-diff(){
+	dir_source="${1%/}"
+	dir_target="${2%/}"
+	file="${3%/}"
+
+	user=$(stat -c '%U' "$dir_target")
+	
+	source_file="$dir_source/$file"
+	target_file="$dir_target/$file"
+
+	diff -u "$source_file" "$target_file" | wc -l
+}
+
+drupal-diff "$1" "$2" "$3"

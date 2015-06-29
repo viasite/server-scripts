@@ -1,0 +1,28 @@
+#!/bin/bash
+if [ $# != "2" ]; then
+    echo 'Usage: $0 /path/to/sql.gz database'
+    exit 1
+fi
+
+GZFILE="$1"
+DBNAME="$2"
+
+exists=$(mysql -Brs --execute="SHOW DATABASES LIKE '$DBNAME'" | grep -cx "$DBNAME")
+
+if [ "$exists" = 1 ]; then
+	echo dbdump $DBNAME
+	dbdump "$DBNAME"
+
+	echo DROP DATABASE $DBNAME
+	mysql --execute="DROP DATABASE '$DBNAME'"
+fi
+
+echo CREATE DATABASE $DBNAME
+mysql --execute="CREATE DATABASE '$DBNAME'"
+
+echo "zcat $GZFILE | mysql $DBNAME"
+if [ -z $(command -v pv) ]; then
+	zcat "$GZFILE" | mysql "$DBNAME"
+else
+	zcat "$GZFILE" | pv --progress --size `gzip -l "$GZFILE" | sed -n 2p | awk '{print $2}'` --name '  Importing.. ' | mysql "$DBNAME"
+fi

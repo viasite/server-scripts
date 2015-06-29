@@ -1,0 +1,25 @@
+#!/bin/bash
+# 14.11.2014
+# 12.12.2014
+# v0.2 - sort by size, directory as parameter
+
+function usage(){
+	echo "$0 /path/to/dir (sorted by ext name)"
+	echo "$0 \$(pwd) | sort -n -k2 (sorted by ext size)"
+	exit 1
+}
+
+if [ $# = 0 ] || [ $1 = "--help" ]; then
+	usage
+fi
+
+
+#ftypes=$(find "$1" -type f | grep -E ".*\.[a-zA-Z0-9]*$" | sed -e 's/.*\(\.[a-zA-Z0-9]*\)$/\1/' | sort | uniq)
+ftypes=$(find "$1" -type f | perl -ne 'print $1 if m/\.([^.\/]+)$/' | sort -u)
+
+for ft in "$ftypes"
+do
+    echo -n "$ft "
+    find "$1" -name "*.${ft}" -exec ls -l {} \; | awk '{total += $5} END {print total}'
+done
+

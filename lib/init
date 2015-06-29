@@ -1,0 +1,49 @@
+#!/bin/bash
+
+readonly PROGRAM_NAME="server-scripts"
+readonly PROGRAM_VERSION="0.1"
+readonly BATS_TEST_RESULTS_DIR="/tmp/$PROGRAM_NAME"
+
+if [ -z "$BATS_TEST" ]; then
+	[ -r "/etc/$PROGRAM_NAME.conf" ] && . "/etc/$PROGRAM_NAME.conf"
+	[ -r "~/.$PROGRAM_NAME.conf" ] && . "~/.$PROGRAM_NAME.conf"
+else
+	. "$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )/../$PROGRAM_NAME.conf.example"
+fi
+
+usage() {
+	echo >&2 "$PROGRAM_NAME $PROGRAM_VERSION"
+}
+
+use_config_var() {
+	var_name="$1"
+	var_val=$(eval "echo \${$1}")
+	#echo "use_config_var: $1 = $var_val"
+	# replace pathes to test
+	if [ "$(echo "$var_val" | head -c 1)" = "/" ]; then
+		var_val="${BATS_TEST_RESULTS_DIR}${var_val}"
+		eval "$var_name=\"$var_val\""
+	fi
+}
+
+while getopts ":y" opt; do
+	case "$opt" in
+		#f) SCRIPT_FORCE="1"
+		#;;
+		#n) SCRIPT_ASSUME_NO="1"
+		#;;
+		#s) SCRIPT_SIMULATE="1"
+		#;;
+		#v) SCRIPT_VERBOSE="1"
+		#;;
+		y) SCRIPT_ASSUME_YES="1"
+		;;
+	esac
+done
+
+if [ "$1" = "--help" ] && [ "$(basename $0)" = "init" ]; then
+	usage
+	exit 1
+fi
+
+shift $((OPTIND - 1))

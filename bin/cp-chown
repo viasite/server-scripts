@@ -1,0 +1,51 @@
+#!/bin/bash
+# Копирование файла из одного сайта (эталон) в указанный c сохранением структуры папок и изменением владельца на нужного
+# Владелец копируемого файла меняется на владельца папки dir_to
+# 
+# v0.1
+# 
+# 17.12.2014
+#
+
+
+#dir_from="/home/visitkaplus/www/visitkaplus.viasite.ru"
+#dir_to=$(pwd)
+#file="testpatch.txt"
+
+function usage(){
+	echo "Usage: $0 dir_from dir_to file"
+	exit 1
+}
+
+if [ $# != 3 ]; then
+	usage
+fi
+
+function cp-chown(){
+	dir_from="${1%/}"
+	dir_to="${2%/}"
+	file="${3%/}"
+
+	user=$(stat -c '%U' "$dir_to")
+	
+	target="$dir_to/$file"
+
+	if [ ! -e "$target" ]; then
+		#target_dir=$(dirname "$file")
+		target_dir=$(dirname "$target")
+		mkdir -p "$target_dir"
+	fi	
+
+	#echo "cp $dir_from/$file" "$dir_to/$file"
+	if [ -d "$dir_from/$file" ]; then
+		echo cp -r "$dir_from/$file" "$dir_to/$file"
+		cp -r "$dir_from/$file" "$dir_to/$file"
+	else
+		cp "$dir_from/$file" "$dir_to/$file"
+	fi
+
+	#echo "chown $user:$user $dir_to/$file"
+	chown -R $user:$user "$dir_to/$file"
+}
+
+cp-chown "$1" "$2" "$3"

@@ -1,0 +1,23 @@
+#!/bin/bash
+# v0.1
+# 04.05.2012
+ 
+if [ $# != 1 ]; then
+	echo Usage: $0 "ssh-key-string"
+	echo "ssh-key-string - уникальная строка ключа, не содержащая слешей, надежнее всего брать строку от начала ключа до первого слеша"
+	exit
+fi
+
+keystr="$1"
+
+users=$(ls -1 /home/)
+
+for user in "$users"; do
+	homedir=$(su -c "echo \$HOME" "$user")
+	sshfile="${homedir}/.ssh/authorized_keys"
+	res=$(grep -Hc "$keystr" "$sshfile" | grep -v ":0")
+	if [ ! -n "$res" ]; then
+		sed -i "s/^.*$keystr.*$//g" "$sshfile"
+		echo removed from $user
+	fi
+done

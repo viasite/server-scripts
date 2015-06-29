@@ -1,0 +1,51 @@
+#!/bin/bash
+
+usage() {
+	echo "Usage: $0 user"
+	echo "www-directory must be www or htdocs,"
+	echo "ex. for /home/user/www you should give command \"$0 user\""
+}
+
+if [ $# != "2" ]; then
+	usage
+	exit 1
+fi
+
+uid="$1"
+gid="$1"
+nginx_uid="www-data"
+home="/home/$uid"
+
+if [ -d "$home/www" ]; then
+	wwwdir="$home/www"
+elif [ -d "$home/htdocs" ]; then
+	wwwdir="$home/htdocs"
+else
+	echo >&2 "www or htdocs dir not found"
+	exit 1
+fi
+
+
+echo "chown -R $uid.$gid $home"
+chown -R "$uid"."$gid" "$home"
+
+find "$home" -type d -exec chmod 755 {} \;
+find "$home" -type f -exec chmod 644 {} \;
+
+#echo "chmod 755 $home/**/*(/)"
+#chmod 755 $home/**/*(/)
+
+#echo "chmod 644 $home/**/*(.)"
+#chmod 644 $home/**/*(.)
+
+echo "chmod 510 $home"
+chmod 550 "$home"
+
+echo "chmod 600 $home/.ssh/authorized_keys"
+chmod 600 "$home/.ssh/authorized_keys"
+
+#echo "setfacl -m user:$nginx_uid:--x $home $wwwdir"
+#setfacl -m user:www-data:--x $home $wwwdir
+
+#echo "setfacl -R -m d:u:"$nginx_uid":rX $wwwdir"
+#setfacl -R -m d:u:www-data:rX $wwwdir

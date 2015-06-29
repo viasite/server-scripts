@@ -1,0 +1,9 @@
+#!/bin/bash
+# 07.07.2013
+# v0.1
+
+if [ -z "$(git diff HEAD)" ]; then
+	git reset --hard
+else
+	git diff --stat HEAD
+fi

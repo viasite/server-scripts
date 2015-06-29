@@ -1,0 +1,93 @@
+#!/bin/bash
+
+. $( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )/../lib/init
+use_config_var "DB_BACKUPS_ROOT"
+use_config_var "DB_BACKUPS_LOG"
+use_config_var "DB_BACKUPS_SEND_HOUR"
+use_config_var "DB_BACKUPS_RSYNC_DEST"
+use_config_var "DB_BACKUPS_EXCLUDED_DBS"
+use_config_var "MAILTO"
+
+DB_BACKUPS_EXCLUDED_DBS="$DB_BACKUPS_EXCLUDED_DBS information_schema performance_schema"
+
+temp_file=$(mktemp -t mysql-backup-XXXX)
+trap 'rm -f "$temp_file"' EXIT
+
+is_test() {
+	[ -n "$BATS_TEST" ]
+}
+
+is_excluded_db() {
+	db="$1"
+	for excluded_db in $(echo "$DB_BACKUPS_EXCLUDED_DBS"); do
+		if [ $(echo "$db" | grep -cE "$excluded_db") = 1 ]; then
+			echo 1
+			return 0
+		fi
+	done
+	echo 0
+	return 1
+}
+
+dump_dbs() {
+	error=0
+	dbs="$1"
+
+	for db in $(echo "$dbs"); do
+		if [ $(is_excluded_db "$db") = "1" ]; then
+			continue
+		fi
+		is_test && echo dbdump "$db"
+		dump_file=$(dbdump "$db")
+		if [ ! -f "$dump_file" ]; then
+			echo >&2 "$dump_file not exist"
+			error=1
+		else
+			echo "$db;$dump_file" >> "$temp_file"
+		fi
+	done
+
+	return "$error"
+}
+
+send_dbs() {
+	for dump_line in $(cat "$temp_file"); do
+		db=$(echo "$dump_line" | cut -d';' -f1)
+		dump_file=$(echo "$dump_line" | cut -d';' -f2)
+		remote_path="${DB_BACKUPS_RSYNC_DEST}/$(hostname)/${db}_${dump_file##*/}"
+		rsync "$dump_file" "$remote_path"
+	done
+}
+
+clean_backups() {
+	for dump_line in $(cat "$temp_file"); do
+		db=$(echo "$dump_line" | cut -d';' -f1)
+		dir="$DB_BACKUPS_ROOT/$(date --date="-2 day" '+%Y/%m/%d')"
+		find "$dir" -name "*.gz" | sort | sed "1 d" | xargs rm
+	done
+}
+
+main() {
+	error=0
+
+	dbs=$(mysql -Brs -e "SHOW DATABASES" | head -n 2)
+	dump_dbs "$dbs"
+
+
+	log_string="$(hostname) mysql backup $(cat "$temp_file" | wc -l) databases"
+	echo "$(date '+%Y-%m-%d %H:%i:%s') $log_string" >> "$DB_BACKUPS_LOG"
+
+	if [ $# -ne 0 ]; then
+		echo >&2 "error while dump dbs"
+	fi
+
+	if [ $(date '+%H') = "$DB_BACKUPS_SEND_HOUR" ]; then
+		send_dbs
+		clean_backups
+		mail -s "$log_string" "$MAILTO" < "$DB_BACKUPS_LOG"
+	fi
+
+	return "$error"
+}
+
+main

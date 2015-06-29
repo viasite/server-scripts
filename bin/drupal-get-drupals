@@ -1,0 +1,23 @@
+#!/bin/bash
+# v0.1
+# 07.07.2014
+# 22.02.2015 - добавлены исключения
+# 
+
+. $( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )/../lib/init
+use_config_var "DRUPAL_ROOT_LEVEL"
+use_config_var "DRUPAL_EXCLUDED_FILE"
+
+temp_file=$(mktemp -t drupal-get-drupals-XXXX)
+trap 'rm -f "$temp_file"' EXIT
+
+find /home -type d -name "sites" \
+-mindepth "$DRUPAL_ROOT_LEVEL" -maxdepth "$DRUPAL_ROOT_LEVEL" \
+| sort > "$temp_file"
+
+for site_path in $(cat "$temp_file"); do
+	root_path="$(echo "$site_path" | sed 's/\/sites//g')"
+	if [ ! -f "$root_path/$DRUPAL_EXCLUDED_FILE" ]; then
+		echo "$root_path"
+	fi
+done

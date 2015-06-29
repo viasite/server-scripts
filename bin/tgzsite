@@ -1,0 +1,17 @@
+#!/bin/bash
+
+if [ $# != "2" ]; then
+	echo 1>&2 "Usage: $0 user domain"
+	echo "www-directory must be in home dir,"
+	echo "ex. for create /home/user/www/domain.ru.tgz you should give command \"$0 user domain.ru\""
+	exit 1
+fi
+
+uid="$1"
+domain="$2"
+home=$(su -c "echo \$HOME" "$uid")
+wwwdir="$home/www"
+domaindir="$wwwdir/$domain"
+
+echo "tar -czf $domaindir.tgz $domaindir"
+tar -czf "$domaindir.tgz" "$domaindir"
