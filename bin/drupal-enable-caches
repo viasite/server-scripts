@@ -1,6 +1,6 @@
 #!/bin/bash
 
-. $( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )/../lib/init
+. /usr/share/server-scripts/lib/init
 use_config_var "DRUPAL_CACHE_LIFETIME"
 use_config_var "DRUPAL_PAGE_CACHE_MAXIMUM_AGE"
 

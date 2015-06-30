@@ -3,7 +3,7 @@
 # При добавлении сигнатуры, нужно создать тестовый файл в /root/virustest, который должен детектиться новой сигнатурой.
 # Все файлы в этой папке должны обнаружаться!
 
-. $( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )/../lib/init
+. /usr/share/server-scripts/lib/init
 use_config_var "VIRUSES_LOG"
 use_config_var "MAILTO"
 

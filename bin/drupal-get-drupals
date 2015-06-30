@@ -4,7 +4,7 @@
 # 22.02.2015 - добавлены исключения
 # 
 
-. $( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )/../lib/init
+. /usr/share/server-scripts/lib/init
 use_config_var "DRUPAL_ROOT_LEVEL"
 use_config_var "DRUPAL_EXCLUDED_FILE"
 

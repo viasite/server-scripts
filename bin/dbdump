@@ -10,7 +10,7 @@
 # LIMIT 100
 
 
-. $( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )/../lib/init
+. /usr/share/server-scripts/lib/init
 use_config_var "DB_BACKUPS_ROOT"
 
 if [ $# != "1" ]; then

@@ -4,14 +4,16 @@ PROGRAM_NAME="server-scripts"
 
 DEFAULT_PREFIX="/usr/share"
 BIN_PATH="/usr/local/bin"
-DRUPAL_SCRIPTS_ROOT="$PWD"
+DRUPAL_SCRIPTS_ROOT=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 USER_CONFIG_PATH="$HOME/.$PROGRAM_NAME.conf"
 SCRIPT_ASSUME_YES=""
 
-function usage(){
+PREFIX="$DEFAULT_PREFIX"
+INSTALL_DIR="$PREFIX/$PROGRAM_NAME"
+
+usage() {
 	echo "
-Usage: $0 <prefix>
-  e.g. $0 $DEFAULT_PREFIX
+Usage: $0
 
 Options:
     -y Assume yes for all questions"
@@ -31,11 +33,10 @@ while getopts ":y" opt; do
 	esac
 done
 
-PREFIX="$1"
-if [ ! -d "$PREFIX" ]; then
-	PREFIX="$DEFAULT_PREFIX"
-fi
-INSTALL_DIR="$PREFIX/$PROGRAM_NAME"
+#PREFIX="$1"
+#if [ ! -d "$PREFIX" ]; then
+#	PREFIX="$DEFAULT_PREFIX"
+#fi
 
 if [ ! -w "$PREFIX" ]; then
 	echo "You cannot write to $INSTALL_DIR, aborting."
@@ -72,7 +73,7 @@ chmod +x "$INSTALL_DIR"/bin/*
 chmod +x "$INSTALL_DIR"/lib/*
 
 if [ -w "$BIN_PATH" ]; then
-	# TODO: ln -s -f too danger, rewrites files!
+	# TODO: ln -s -f too danger, it rewrites files!
 	find "$INSTALL_DIR"/bin -type f -exec ln -s {} "$BIN_PATH" \;
 fi
 

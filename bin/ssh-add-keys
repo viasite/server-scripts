@@ -2,7 +2,7 @@
 # v0.2
 # 05.12.2014
  
-. $( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )/../lib/init
+. /usr/share/server-scripts/lib/init
 use_config_var "SSH_PUBLIC_KEYS_DIR"
 
 if [ ! -d "$SSH_PUBLIC_KEYS_DIR" ]; then
