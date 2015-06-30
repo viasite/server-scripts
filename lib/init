@@ -15,12 +15,16 @@ usage() {
 	echo >&2 "$PROGRAM_NAME $PROGRAM_VERSION"
 }
 
+is_test() {
+	[ -n "$BATS_TEST" ]
+}
+
 use_config_var() {
 	var_name="$1"
 	var_val=$(eval "echo \${$1}")
 	#echo "use_config_var: $1 = $var_val"
 	# replace pathes to test
-	if [ "$(echo "$var_val" | head -c 1)" = "/" ]; then
+	if [ is_test ] && [ "$(echo "$var_val" | head -c 1)" = "/" ]; then
 		var_val="${BATS_TEST_RESULTS_DIR}${var_val}"
 		eval "$var_name=\"$var_val\""
 	fi

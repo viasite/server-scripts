@@ -13,10 +13,6 @@ DB_BACKUPS_EXCLUDED_DBS="$DB_BACKUPS_EXCLUDED_DBS information_schema performance
 temp_file=$(mktemp -t mysql-backup-XXXX)
 trap 'rm -f "$temp_file"' EXIT
 
-is_test() {
-	[ -n "$BATS_TEST" ]
-}
-
 is_excluded_db() {
 	db="$1"
 	for excluded_db in $(echo "$DB_BACKUPS_EXCLUDED_DBS"); do
