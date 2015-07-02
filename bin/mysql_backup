@@ -80,16 +80,15 @@ dump_dbs() {
 
 send_dbs() {
 	remote_user_host="${DB_BACKUPS_REMOTE_USER}@${DB_BACKUPS_REMOTE_HOST}"
-	remote_dir="$DB_BACKUPS_REMOTE_DIR"
-	ssh "$user_host" mkdir -p "$remote_dir"
+	ssh "$remote_user_host" mkdir -p "$DB_BACKUPS_REMOTE_DIR"
 
 	dbs="$1"
 	for db in $(echo "$dbs"); do
 		last_link="$DB_BACKUPS_LAST/$db.gz"
-		echo "$last_link"
+		#echo "$last_link"
 		if [ -h "$last_link" ]; then
 			dump_file=$(readlink "$last_link")
-			remote_path="${remote_user_host}:${remote_dir}/${db}_${dump_file##*/}"
+			remote_path="${remote_user_host}:${DB_BACKUPS_REMOTE_DIR}/${db}_${dump_file##*/}"
 			echo rsync "$dump_file" "$remote_path"
 			rsync "$dump_file" "$remote_path"
 		fi
