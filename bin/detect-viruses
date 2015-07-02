@@ -30,7 +30,7 @@ find "$find_dir" -name ".htaccess" -exec grep -iHc "midp" {} \; | grep -v ":0" >
 
 if [ -s "$VIRUSES_LOG" ]; then
 	count=$(wc -l "$VIRUSES_LOG")
-	mail -s "[alert] server $(hostname), found viruses: $count" "$MAILTO" < "$VIRUSES_LOG"
+	mail -s "[alert] server $(hostname -f), found viruses: $count" "$MAILTO" < "$VIRUSES_LOG"
 	echo Found $count viruses!
 	cat "$VIRUSES_LOG"
 	rm "$VIRUSES_LOG"
