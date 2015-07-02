@@ -6,9 +6,12 @@ MAILTO="popstas@gmail.com"
 DB_BACKUPS_ROOT="/var/backups/sql"
 DB_BACKUPS_LOG="/var/log/mysql_backup.log"
 DB_BACKUPS_SEND_HOUR="17"
-DB_BACKUPS_RSYNC_DEST="root@mysql_backup:/var/backups/sql"
+
+DB_BACKUPS_REMOTE_USER="root"
+DB_BACKUPS_REMOTE_HOST="mysql_backup"
+DB_BACKUPS_REMOTE_DIR="/var/backups/sql/remote_host"
+
 DB_BACKUPS_EXCLUDED_DBS="_test$"
-#DB_BACKUPS_ROOT="/tmp/server-scripts/backups/sql"
 
 # db-size
 DB_SIZE_NAMES_FILE="/root/log/drupal_dbs.log"

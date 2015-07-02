@@ -1,14 +1,39 @@
 #!/bin/bash
+# v0.2
+
+SCRIPT_HELP="
+Backup all databases.
+
+Usage:
+{0} backup - backup databases
+{0} send - send backups to remote
+{0} clean - clean old backups
+"
 
 . /usr/share/server-scripts/lib/init
 use_config_var "DB_BACKUPS_ROOT"
 use_config_var "DB_BACKUPS_LOG"
 use_config_var "DB_BACKUPS_SEND_HOUR"
-use_config_var "DB_BACKUPS_RSYNC_DEST"
+use_config_var "DB_BACKUPS_REMOTE_USER"
+use_config_var "DB_BACKUPS_REMOTE_HOST"
+use_config_var "DB_BACKUPS_REMOTE_DIR"
 use_config_var "DB_BACKUPS_EXCLUDED_DBS"
 use_config_var "MAILTO"
 
+DB_BACKUPS_LAST="$DB_BACKUPS_ROOT/last"
 DB_BACKUPS_EXCLUDED_DBS="$DB_BACKUPS_EXCLUDED_DBS information_schema performance_schema"
+
+IS_BACKUP=""
+IS_SEND=""
+IS_CLEAN=""
+
+if [ "$1" = "backup" ]; then IS_BACKUP=1
+elif [ "$1" = "send" ]; then IS_SEND=1
+elif [ "$1" = "clean" ]; then IS_CLEAN=1
+else
+	usage
+	exit 1
+fi
 
 temp_file=$(mktemp -t mysql-backup-XXXX)
 trap 'rm -f "$temp_file"' EXIT
@@ -25,14 +50,21 @@ is_excluded_db() {
 	return 1
 }
 
+get_dbs() {
+	dbs_all=$(mysql -Brs -e "SHOW DATABASES") # | head -n 2)
+	for db in $(echo "$dbs_all"); do
+		if [ $(is_excluded_db "$db") = "1" ]; then
+			continue
+		fi
+		echo "$db"
+	done
+}
+
 dump_dbs() {
 	error=0
 	dbs="$1"
 
 	for db in $(echo "$dbs"); do
-		if [ $(is_excluded_db "$db") = "1" ]; then
-			continue
-		fi
 		is_test && echo dbdump "$db"
 		dump_file=$(dbdump "$db")
 		if [ ! -f "$dump_file" ]; then
@@ -47,40 +79,57 @@ dump_dbs() {
 }
 
 send_dbs() {
-	for dump_line in $(cat "$temp_file"); do
-		db=$(echo "$dump_line" | cut -d';' -f1)
-		dump_file=$(echo "$dump_line" | cut -d';' -f2)
-		remote_path="${DB_BACKUPS_RSYNC_DEST}/$(hostname)/${db}_${dump_file##*/}"
-		rsync "$dump_file" "$remote_path"
+	remote_user_host="${DB_BACKUPS_REMOTE_USER}@${DB_BACKUPS_REMOTE_HOST}"
+	remote_dir="$DB_BACKUPS_REMOTE_DIR"
+	ssh "$user_host" mkdir -p "$remote_dir"
+
+	dbs="$1"
+	for db in $(echo "$dbs"); do
+		last_link="$DB_BACKUPS_LAST/$db.gz"
+		echo "$last_link"
+		if [ -h "$last_link" ]; then
+			dump_file=$(readlink "$last_link")
+			remote_path="${remote_user_host}:${remote_dir}/${db}_${dump_file##*/}"
+			echo rsync "$dump_file" "$remote_path"
+			rsync "$dump_file" "$remote_path"
+		fi
 	done
 }
 
 clean_backups() {
-	for dump_line in $(cat "$temp_file"); do
-		db=$(echo "$dump_line" | cut -d';' -f1)
+	dbs="$1"
+	for db in $(echo "$dbs"); do
 		dir="$DB_BACKUPS_ROOT/$(date --date="-2 day" '+%Y/%m/%d')"
-		find "$dir" -name "*.gz" | sort | sed "1 d" | xargs rm
+		if [ -d "$dir" ]; then
+			find "$dir" -name "*.gz" | sort | sed "1 d" | xargs rm
+		fi
 	done
 }
 
 main() {
 	error=0
 
-	dbs=$(mysql -Brs -e "SHOW DATABASES" | head -n 2)
-	dump_dbs "$dbs"
+	dbs=$(get_dbs)
+	if [ -n "$IS_BACKUP" ]; then
+		#echo dump_dbs
+		dump_dbs "$dbs"
 
+		log_string="$(hostname -f) mysql backup $(wc -l "$temp_file") databases"
+		echo "$(date '+%Y-%m-%d %H:%i:%s') $log_string" >> "$DB_BACKUPS_LOG"
 
-	log_string="$(hostname) mysql backup $(cat "$temp_file" | wc -l) databases"
-	echo "$(date '+%Y-%m-%d %H:%i:%s') $log_string" >> "$DB_BACKUPS_LOG"
-
-	if [ $# -ne 0 ]; then
-		echo >&2 "error while dump dbs"
+		if [ $# -ne 0 ]; then
+			echo >&2 "error while dump dbs"
+		fi
 	fi
 
-	if [ $(date '+%H') = "$DB_BACKUPS_SEND_HOUR" ]; then
-		send_dbs
-		clean_backups
-		mail -s "$log_string" "$MAILTO" < "$DB_BACKUPS_LOG"
+	if [ -n "$IS_SEND" ]; then
+		#echo send_dbs
+		send_dbs "$dbs"
+	fi
+
+	if [ -n "$IS_CLEAN" ]; then
+		#echo clean_backups
+		clean_backups "$dbs"
 	fi
 
 	return "$error"

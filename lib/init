@@ -4,27 +4,38 @@ readonly PROGRAM_NAME="server-scripts"
 readonly PROGRAM_VERSION="0.1"
 readonly BATS_TEST_RESULTS_DIR="/tmp/$PROGRAM_NAME"
 
-if [ -z "$BATS_TEST" ]; then
+is_test() {
+	[ -n "$BATS_TEST" ] && [ "$BATS_TEST" != 0 ]
+}
+
+if is_test; then
+	. "$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )/../$PROGRAM_NAME.conf.example"
+else
 	[ -r "/etc/$PROGRAM_NAME.conf" ] && . "/etc/$PROGRAM_NAME.conf"
 	[ -r "~/.$PROGRAM_NAME.conf" ] && . "~/.$PROGRAM_NAME.conf"
-else
-	. "$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )/../$PROGRAM_NAME.conf.example"
 fi
 
 usage() {
-	echo >&2 "$PROGRAM_NAME $PROGRAM_VERSION"
-}
-
-is_test() {
-	[ -n "$BATS_TEST" ]
+	version="$(grep '# \?v[0-9.]\+' -o $0 | tr -d '# ')"
+	script_name="$(basename $0)"
+	if [ "$script_name" != "init" ]; then
+		echo "$script_name $version"
+		if [ -n "$SCRIPT_HELP" ]; then
+			echo "$SCRIPT_HELP" | sed "s/{0}/${script_name}/g"
+		fi
+		echo "Part of $PROGRAM_NAME $PROGRAM_VERSION"
+	else
+		echo >&2 "$PROGRAM_NAME $PROGRAM_VERSION"
+	fi
 }
 
 use_config_var() {
 	var_name="$1"
 	var_val=$(eval "echo \${$1}")
 	#echo "use_config_var: $1 = $var_val"
+
 	# replace pathes to test
-	if [ is_test ] && [ "$(echo "$var_val" | head -c 1)" = "/" ]; then
+	if is_test && [ "$(echo "$var_val" | head -c 1)" = "/" ]; then
 		var_val="${BATS_TEST_RESULTS_DIR}${var_val}"
 		eval "$var_name=\"$var_val\""
 	fi
