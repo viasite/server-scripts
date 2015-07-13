@@ -3,7 +3,7 @@
 # v0.1
 # 
 
-set -euo pipefail
+set -u
 
 VERBOSE=""
 QUIET=""
@@ -26,7 +26,7 @@ trap 'rm -f "$sitemap_temp" "$root_paths_temp"' EXIT
 usage() {
 	echo "drupal-cache-warm v0.1
 
-Использование: drupal-cache-warm mainpage
+# Использование: drupal-cache-warm mainpage
                Прогрев главных страниц
 
                drupal-cache-warm sitemap
@@ -49,8 +49,17 @@ usage() {
 
 На выходе выдает cached_sites / scanned_sites
 
-Options:
+# Переменные окружения:
+Можно перезаписывать урлы, передавая переменные в скрипт:
+URL_REWRITE - строка замены для sed, например URL_REWRITE=\"\(/content/.*\)|\1?ajax=1\",
+URL_REWRITE_APPEND - если не пустая, то урлы будут добавлены к урлам карты, а не заменены
+
+# Пример вызова с переменными:
+URL_REWRITE=\"\(/content/.*\)|\1?ajax=1\" URL_REWRITE_APPEND=1 drupal-cache-warm -v sitemap /path/to/drupal/site
+
+# Options:
     -v Verbose mode, for test
+    -d Debug and Verbose mode, for test, в режиме отладки страницы не прогреваются, чтобы проверить работу обработки урлов
     -q Quiet mode, for cron
 "
 }
@@ -126,7 +135,7 @@ warm_pages() {
 	site_pages=0
 	urls_file="$1"
 	for url in $(cat "$urls_file"); do
-		echo $url
+		#echo $url
 		warm_page "$url"
 	done
 
@@ -135,8 +144,15 @@ warm_pages() {
 
 warm_page() {
 	url="$1"
-	headers=$(curl -s -I -L "$url")
-	hit=$(echo "$headers" | grep -c "X-Drupal-Cache: HIT")
+	if [ -z "$DEBUG" ]; then
+		headers=$(curl -s -I -L "$url")
+		hit=$(echo "$headers" | grep -c "X-Drupal-Cache: HIT")
+		if [ "$hit" = 0 ]; then
+			sleep 0.5
+		fi
+	else
+		hit=-1
+	fi
 
 	#curl -s "$url" >/dev/null
 	#hit=0
@@ -148,6 +164,7 @@ warm_page() {
 	site_pages=$(( $pages + 1 ))
 
 	[ -n "$VERBOSE" ] && echo "$hit $url"
+
 }
 
 
