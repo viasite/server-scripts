@@ -127,7 +127,7 @@ warm_pages() {
 	urls_file="$1"
 	for url in $(cat "$urls_file"); do
 		echo $url
-		#warm_page "$url"
+		warm_page "$url"
 	done
 
 }
