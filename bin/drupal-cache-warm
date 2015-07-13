@@ -3,10 +3,13 @@
 # v0.1
 # 
 
+set -euo pipefail
+
 VERBOSE=""
 QUIET=""
 DEBUG=""
-CACHE_AJAX="" # кешировать страницы еще и с ?ajax=1 дополнительно к тем, что есть в карте
+URL_REWRITE=${URL_REWRITE:-""} # sed-like replace string
+URL_REWRITE_APPEND=${URL_REWRITE_APPEND:-""} # if not empty, rewrited url will be appended to url list, else it will replace old url
 
 hits=0
 pages=0
@@ -16,9 +19,8 @@ site_pages=0
 name_filter=""
 
 sitemap_temp=$(mktemp -t drupal-warm-cache-sitemap-XXXX)
-sitemap_temp2=$(mktemp -t drupal-warm-cache-sitemap-XXXX)
 root_paths_temp=$(mktemp -t drupal-warm-cache-root_paths-XXXX)
-trap 'rm -f "$sitemap_temp" "$sitemap_temp2" "$root_paths_temp"' EXIT
+trap 'rm -f "$sitemap_temp" "$root_paths_temp"' EXIT
 
 
 usage() {
@@ -69,21 +71,33 @@ warm_sitemaps() {
 		sites=$(( $sites + 1 ))
 		site_base="http://$(basename "$root_path")"
 		[ -z "$QUIET" ] && echo "$site_base"
-		
+
 		cd "$root_path"
 		drs urls sitemap > "$sitemap_temp"
 
 		# добавляем ?ajax=1 к каждой странице
-		if [ -n "$CACHE_AJAX" ]; then
-			[ -n "$VERBOSE" ] && echo "Append ?ajax=1 to url list"
-			> "$sitemap_temp2"
+		if [ -n "$URL_REWRITE" ]; then
+
+			# build rewrited url list
+			[ -n "$VERBOSE" ] && echo "Rewrite url by sed \'s|$URL_REWRITE|g\'"
+			sitemap_temp2=$(mktemp -t drupal-warm-cache-sitemap-XXXX)
 			for url in $(cat "$sitemap_temp"); do
-				echo "$url?ajax=1" >> "$sitemap_temp2"
+				echo "$url" | sed "s|$URL_REWRITE|g" >> "$sitemap_temp2"
 			done
-			cat "$sitemap_temp2" >> "$sitemap_temp"
+
+			if [ -n "$URL_REWRITE_APPEND" ]; then
+				[ -n "$VERBOSE" ] && echo "Append rewrited url list to original"
+				sitemap_temp3=$(mktemp -t drupal-warm-cache-sitemap-XXXX)
+				cat "$sitemap_temp2" "$sitemap_temp" | sort | uniq > "$sitemap_temp3"
+				mv "$sitemap_temp3" "$sitemap_temp"
+			else
+				[ -n "$VERBOSE" ] && echo "Replace url list to rewrited"
+				cp "$sitemap_temp2" "$sitemap_temp"
+			fi
+			rm "$sitemap_temp2"
 		fi
 		urls_count=$(cat "$sitemap_temp" | wc -l)
-		
+
 		cache_page_count=$(drs table-count cache_page)
 
 		# if cache warmed, don't warm twice
@@ -96,7 +110,7 @@ warm_sitemaps() {
 			else
 				warm_pages "$sitemap_temp"
 			fi
-			
+
 			[ -z "$QUIET" ] && echo "Total sitemaps hits: $site_hits / $site_pages in $site_base"
 		else
 			[ -z "$QUIET" ] && echo "Cache warmed $cache_page_count / $urls_count in $site_base"
@@ -112,8 +126,8 @@ warm_pages() {
 	site_pages=0
 	urls_file="$1"
 	for url in $(cat "$urls_file"); do
-		#echo $url
-		warm_page "$url"
+		echo $url
+		#warm_page "$url"
 	done
 
 }
@@ -162,11 +176,8 @@ main() {
 		exit 1
 	fi
 
-	while getopts ":adqv" opt; do
+	while getopts ":dqv" opt; do
 		case "$opt" in
-			a) CACHE_AJAX="1"
-			#shift
-			;;
 			d) DEBUG="1"
 			VERBOSE=1
 			#shift
