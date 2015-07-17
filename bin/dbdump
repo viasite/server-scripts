@@ -75,7 +75,7 @@ if [ ! -d "$LAST_DIR" ]; then
 	mkdir -p "$LAST_DIR"
 fi
 LAST_LINK="$LAST_DIR/$DBNAME.gz"
-LAST_FILE=$(ls -l "$LAST_LINK" | cut -d' ' -f12)
+#LAST_FILE=$(ls -l "$LAST_LINK" | cut -d' ' -f12)
 
 ln -s -f "$FILE" "$LAST_LINK"
 
