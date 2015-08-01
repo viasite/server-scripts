@@ -1,0 +1,8 @@
+#!/bin/bash
+tests_dir="/usr/local/bin/drupal-tests"
+if [ -n "$($tests_dir/engine/school)" ] \
+|| [ -n "$($tests_dir/engine/snormal)" ] \
+|| [ -n "$($tests_dir/engine/visitkaplus)" ]
+then
+	echo "1"
+fi

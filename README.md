@@ -1,11 +1,22 @@
 # Drall
+Bulk operations for Drupal sites.
+
+## Depedencies:
+- [amoffat/sh](https://github.com/amoffat/sh)
+- uses `/root/bin/drupal-get-drupals` command,  you can change variable `get_drupals_command` in script
+- search match-tests in `/usr/local/bin/drupal-tests/`, you can change variable `tests_root_path` in script, see `/match-tests-examples`
+- sites placed in /home/user/www/example.com, you can change it in `drupal-get-drupals`
+- (server-scripts)[https://github.com/popstas/server-scripts] (`cp-chown`, `drupal-patch` in examples)
+- (drupal-scripts)[https://github.com/popstas/drupal-scripts] (`drs` in examples)
+
+## Features
 - поиск всех папок друпала
 - фильтрация папок
 - переход в корневую папку друпала
 - выполнение заданной команды от имени юзера сайта или root
 
 
-Usage: `drall [options] ["command or command_file_path"]`
+Common usage: `drall [options] ["command or command_file_path"]`
 
 ```
 Options:
@@ -45,7 +56,7 @@ Options:
 
 ## Фильтрация сайтов:
 `-m` - главная команда для фильтрации. Работает так:  
-В /usr/local/bin/drupal-tests ищется одноименный файл и выполняется в корне сайта.  
+В `/usr/local/bin/drupal-tests` ищется одноименный файл и выполняется в корне сайта.  
 Если результат не пустой и не равен нулю, сайт проходит фильтр.  
 Можно указывать несколько тестов так:  
 `drall -m test1 -m test2`  
@@ -64,19 +75,17 @@ Options:
 
 ## Примеры использования:
 `drall` - просто выведет список всех друпалов  
-`drall -m snormal` выведет список всех snormal  
+`drall -m snormal` - выведет список всех snormal  
 `drall -m visitkaplus -m clean_css` - получение списка всех визиток с чистым css  
-`drall "drush dis dblog"` - отключит dblog на всех сайтах  
-`drall "drush ublk user@example.com"` - а также другие drush-команды  
-`drall "drupal-patch http://drupal.org/path/to/patch"`  
-# пропатчить все готовые не измененные сайты (патч просто молча не применится, если сайт изменен)  
-`drall -m visitkaplus "drupal-patch http://visitkaplus.viasite.ru/patches/style.css_menu_width.patch"`  
-`drall -m "-drs vget viasite_update_modified" -m visitkaplus` # получить все визитки+ не отключенные от апдейтов  
-`drall -v -m all_complete -m clean_all` # все готовые не измененные сайты  
-`drall --asroot -m snormal -m clean_css -v 'cp-chown /home/snormal/www/snormal.viasite.ru $PWD sites/all/themes/viasite_vplus/css/style.css'` # скопировать style.css из эталона в каждый неизмененный snormal  
+`drall 'drush dis dblog'` - отключит dblog на всех сайтах  
+`drall 'drush ublk user@example.com'` - а также другие drush-команды  
+`drall 'drupal-patch http://drupal.org/path/to/patch'` - применение патча ко всем сайтам
+`drall -m visitkaplus 'drupal-patch http://example.com/style.css_menu_width.patch'` - пропатчить все готовые не измененные сайты  
+`drall -m '-drs vget update_modified' -m visitkaplus` - получить все визитки+ не отключенные от апдейтов  
+`drall -v -m all_complete -m clean_all` - получить все готовые не измененные сайты  
+`drall --asroot -m snormal -m clean_css -v 'cp-chown /home/from/www/from.example.com $PWD sites/all/themes/theme/css/style.css'` - скопировать style.css из from.example.com в каждый неизмененный snormal  
 
 
 ## Известные проблемы:
 1. Команду нужно заключать в кавычки, фактически, команда должна быть одним параметром скрипта
 2. Если в папке тестов drupal-tests будет несколько одноименных тестов, команда скорее всего упадет
-3. Если скрипт выдает exitcode отличный от нуля, программа упадет

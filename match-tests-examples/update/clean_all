@@ -1,0 +1,12 @@
+#!/bin/bash
+if [ "$(drs module-enabled update)" = "1" ]; then
+	variables="js css theme db core hooking"
+	modified=0
+	for variable in $variables; do
+		value=$(drs vget update_modified_$variable 2>/dev/null || echo 0)
+		modified=$(( modified + $value ))
+	done
+	if [ $modified = 0 ]; then
+		echo 1
+	fi
+fi

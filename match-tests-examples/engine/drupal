@@ -1,0 +1,4 @@
+#!/bin/bash
+if [ ! -d sites/all/themes/vplus ]; then
+	echo 1
+fi

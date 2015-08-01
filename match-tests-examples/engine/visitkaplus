@@ -1,0 +1,7 @@
+#!/bin/bash
+if [ -d sites/all/themes/vplus ] \
+&& [ ! -d sites/all/modules/commerce ] \
+&& [ $(basename $PWD | grep "uoggo\|school" | wc -l) = 0 ]
+then
+	echo 1
+fi

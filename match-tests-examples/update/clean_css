@@ -1,0 +1,4 @@
+#!/bin/bash
+if [ "$(drs module-enabled update)" = "1" ] && [ "$(drs vget update_modified_css)" != "1" ]; then
+	echo 1
+fi

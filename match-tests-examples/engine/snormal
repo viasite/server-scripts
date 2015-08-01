@@ -1,0 +1,4 @@
+#!/bin/bash
+if [ -d sites/all/themes/vplus ] && [ -d sites/all/modules/commerce ]; then
+	echo 1
+fi

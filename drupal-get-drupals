@@ -1,0 +1,4 @@
+#!/bin/bash
+find /home -mindepth 4 -maxdepth 4 -type d -name "sites" \
+| sed 's/\/sites//g' \
+| sort
