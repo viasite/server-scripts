@@ -47,6 +47,8 @@ class MultipleOption(Option):
 
 def main():
     tests_root_path = '/usr/local/bin/drupal-tests/'
+    get_drupals_command = '/root/bin/drupal-get-drupals'
+
     signal.signal(signal.SIGINT, signal_handler)
 
     usage = 'usage: %prog [options] "command or command_file_path"'
@@ -97,6 +99,7 @@ def main():
     (options, args) = parser.parse_args()
 
     options.tests_root_path = tests_root_path
+    options.get_drupals_command = get_drupals_command
 
     command = None
     if len(args) > 1:
@@ -206,8 +209,7 @@ class Drall:
                 # print(command_result)
 
     def get_drupals(self):
-        site_list = sh.Command('/root/bin/drupal-get-drupals'
-                               ).run().split()
+        site_list = sh.Command(self.options.get_drupals_command).run().split()
         if self.options.verbose:
             print 'Found %s unfiltered sites' % len(site_list)
 
