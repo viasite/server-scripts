@@ -1,0 +1,108 @@
+#!/bin/bash
+# log must be in combined_vhosts format and has time for time-top SITES_LOAD_TIME_ENABLED=1
+#     log_format drupal_cache_hit '$host $remote_addr - $remote_user [$time_local] '
+#                '"$request" $status "$sent_http_x_drupal_cache" '
+#                '"$http_user_agent" $request_time';
+
+
+set -euo pipefail
+IFS=$'\n\t'
+
+. /usr/share/server-scripts/lib/init
+use_config_var "SITES_LOAD_LOG_FILE"
+use_config_var "SITES_LOAD_TIME_ENABLED"
+
+time_enabled() {
+	[ "$SITES_LOAD_TIME_ENABLED" != "1" ]
+}
+
+last_mins="${1:-1}"
+limit_mins=${2:-}
+
+logfile="$SITES_LOAD_LOG_FILE"
+
+
+
+if [ "${1:-}" = "--help" ]; then
+	echo "Show nginx request for last 1 minute"
+	echo "Usage: $0 mins"
+	exit 1
+fi
+
+temp_log=$(mktemp -t sites-top-XXXX)
+temp_out=$(mktemp -t sites-top-XXXX)
+trap 'rm -f "$temp_log" "$temp_out"' EXIT
+
+grep_expr=""
+period=""
+for sec in {0..30}; do
+	log_date=$(LC_ALL=eu_US date -d "-${last_mins} min ${sec} sec" '+%d/%b/%Y:%T')
+	if [ "$sec" = 0 ]; then period="from $log_date"; fi
+	if [ -n "$grep_expr" ]; then grep_expr="$grep_expr\|"; fi
+	grep_expr="${grep_expr}${log_date}"
+done
+line=$(grep -m1 -n "$grep_expr" "$logfile" | cut -d':' -f1)
+
+uptime
+echo ""
+
+if [ -n "$line" ]; then
+	tail -n+$line "$logfile" > "$temp_log"
+
+	if [ -n "$limit_mins" ]; then
+		mins_to=$(( $last_mins - $limit_mins ))
+		if [ $mins_to -gt 0 ]; then
+			grep_expr=""
+			for sec in {0..30}; do
+				log_date=$(LC_ALL=eu_US date -d "-${mins_to} min ${sec} sec" '+%d/%b/%Y:%T')
+				if [ "$sec" = 0 ]; then period="$period to $log_date"; fi
+				if [ -n "$grep_expr" ]; then grep_expr="$grep_expr\|"; fi
+				grep_expr="${grep_expr}${log_date}"
+			done
+			line=$(grep -m1 -n "$grep_expr" "$temp_log" | cut -d':' -f1)
+
+			if [ -n "$line" ]; then
+				temp_head=$(mktemp -t sites-top-XXXX)
+				head "$temp_log" -n $line > "$temp_head"
+				mv "$temp_head" "$temp_log"
+			else
+				echo "cannot find end period in log"
+				exit 1
+			fi
+		fi
+	fi
+
+	echo "period: $period"
+	total_loads=$(cat "$temp_log" | wc -l)
+	time_enabled && total_time=$(cat "$temp_log" | awk -F\" '{print $7}' | grep -v "^$" | tr -d ' ' | awk '{ sum += $1 } END { print sum }' | cut -d'.' -f1)
+	time_enabled && total_per_load=$(echo "scale=2; x = $total_time / $total_loads; if(x<1 && x>0) print 0; x" | bc)
+
+	echo ""
+
+	for domain in $(cat "$temp_log" | cut -d' ' -f1 | sort | uniq); do
+		domain_loads=$(grep "^$domain" "$temp_log" | wc -l)
+		if [ time_enabled ]; then
+			domain_time=$(grep "^$domain" "$temp_log" | awk -F\" '{print $7}' | grep -v "^$" | tr -d ' ' | awk '{ sum += $1 } END { print sum }' | cut -d'.' -f1)
+			if [ -z "$domain_time" ]; then domain_time=0; fi
+			if [ -z "$domain_loads" ]; then domain_loads=0; fi
+			per_load=$(echo "scale=2; x = $domain_time / $domain_loads; if(x<1 && x>0) print 0; x" | bc)
+			echo -e "$domain_time\t$domain_loads\t$per_load\t\t$domain" >> "$temp_out"
+		else
+			echo -e "$domain_loads\t\t$domain" >> "$temp_out"
+		fi
+	done
+
+	if [ time_enabled ]; then
+		echo -e "time\tloads\tper_load\tdomain"
+		echo -e "$total_time\t$total_loads\t$total_per_load\n"
+	fi
+	else
+		echo -e "loads\tdomain"
+		echo -e "$total_loads\n"
+	fi
+	cat "$temp_out" | sort -nr
+
+	echo ""
+	echo "Top pages:"
+	tail -n$total_loads /var/log/nginx/drupal_cache_hit.log | cut -d' ' -f1,8 | sort | uniq -c | sort -nr | head -n10
+fi

@@ -1,11 +1,10 @@
 #!/bin/bash
-
 readonly PROGRAM_NAME="server-scripts"
 readonly PROGRAM_VERSION="0.1"
 readonly BATS_TEST_RESULTS_DIR="/tmp/$PROGRAM_NAME"
 
 is_test() {
-	[ -n "$BATS_TEST" ] && [ "$BATS_TEST" != 0 ]
+	[ -n "${BATS_TEST:-""}" ] && [ "$BATS_TEST" != 0 ]
 }
 
 if is_test; then
@@ -56,7 +55,7 @@ while getopts ":y" opt; do
 	esac
 done
 
-if [ "$1" = "--help" ] && [ "$(basename $0)" = "init" ]; then
+if [ "${1:-""}" = "--help" ] && [ "$(basename $0)" = "init" ]; then
 	usage
 	exit 1
 fi

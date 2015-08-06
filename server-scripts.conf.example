@@ -19,7 +19,7 @@ DB_SIZE_CACHE_MINS=30
 
 # detect-viruses
 VIRUSES_LOG="/var/log/viruses.log"
-VIRUSES_PHP_SIGNATURES="eval(base64_decode\|'base'.(32*2\|eval(stripslashes\|FilesMan\|WSO_VERSION\|$sF=\"PCT4BA6ODSE_\"\|$qV=\"stop_\""
+VIRUSES_PHP_SIGNATURES="eval(base64_decode\|'base'.(32*2\|eval(stripslashes\|FilesMan\|WSO_VERSION\|\$sF=\"PCT4BA6ODSE_\"\|\$qV=\"stop_\""
 VIRUSES_JS_SIGNATURES="document.write(unescape"
 
 # drupal-enable-caches
@@ -32,6 +32,10 @@ DRUPAL_EXCLUDED_FILE=".excluded"
 
 # get-password
 PASSWORD_LENGTH=12
+
+# sites-load
+SITES_LOAD_TIME_ENABLED="0"
+SITES_LOAD_LOG_FILE="/var/log/nginx/access.log"
 
 # ssh-add-keys
 SSH_PUBLIC_KEYS_DIR="/root/ssh-public-keys"
