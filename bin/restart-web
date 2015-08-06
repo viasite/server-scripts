@@ -1,2 +1,3 @@
 #!/bin/bash
-/etc/init.d/apache2 restart && /etc/init.d/nginx restart
+nginx -t && service nginx restart
+apachectl configtest && service apache2 restart

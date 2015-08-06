@@ -1,2 +1,3 @@
 #!/bin/bash
-/etc/init.d/nginx configtest && /etc/init.d/apache2 reload && /etc/init.d/nginx reload
+nginx -t && service nginx reload
+service apache2 reload
