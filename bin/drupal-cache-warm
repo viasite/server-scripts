@@ -188,8 +188,6 @@ warm_mainpages() {
 
 
 main() {
-	name_filter=${2:-""}
-
 	if [ "$1" = "--help" ]; then
 		usage
 		exit 1
@@ -212,7 +210,7 @@ main() {
 
 	shift $((OPTIND - 1))
 
-	name_filter=""
+	name_filter=${2:-""}
 	if [ -n "$name_filter" ]; then
 		[ -n "$DEBUG" ] && echo "name_filter: $name_filter"
 		name_filter="--name=$name_filter"
