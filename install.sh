@@ -67,6 +67,10 @@ if [ -d "$INSTALL_DIR" ]; then
 	rm -rf "$INSTALL_DIR"
 fi
 
+python -c "import sh" || {
+	pip install sh
+}
+
 cp -R "$DRUPAL_SCRIPTS_ROOT" "$INSTALL_DIR"
 
 chmod +x "$INSTALL_DIR"/bin/*
