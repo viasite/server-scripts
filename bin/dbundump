@@ -7,6 +7,16 @@ fi
 GZFILE="$1"
 DBNAME="$2"
 
+if [ ! -e "$GZFILE" ]; then
+	echo >&2 "File $GZFILE not exists"
+	exit 1
+fi
+
+if [ -L "$GZFILE" ]; then
+	echo "$GZFILE is symlink to $(readlink -f "$GZFILE")"
+	GZFILE="$(readlink -f "$GZFILE")"
+fi
+
 exists=$(mysql -Brs --execute="SHOW DATABASES LIKE '$DBNAME'" | grep -cx "$DBNAME")
 
 if [ "$exists" = 1 ]; then
@@ -24,5 +34,8 @@ echo "zcat $GZFILE | mysql $DBNAME"
 if [ -z $(command -v pv) ]; then
 	zcat "$GZFILE" | mysql "$DBNAME"
 else
-	zcat "$GZFILE" | pv --progress --size `gzip -l "$GZFILE" | sed -n 2p | awk '{print $2}'` --name '  Importing.. ' | mysql "$DBNAME"
+	size_compressed=$(stat --format="%s" "$GZFILE")
+	size_uncompressed=$(zcat "$GZFILE" | wc -c)
+	echo "Unrchive from $(( $size_compressed / 1048576 ))MB to $(( $size_uncompressed / 1048576 ))MB"
+	zcat "$GZFILE" | pv --progress --size $size_uncompressed --name '  Importing.. ' | mysql "$DBNAME"
 fi
