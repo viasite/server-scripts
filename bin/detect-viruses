@@ -23,9 +23,9 @@ echo Search in $find_dir...
 
 # chr(101 - был вирус на эту строку, но вместе с ним еще 20 нормальных файлов детектится, надо переписать, пример есть в /root/virustest/virus/fancy_shadow_e.php
 
-find "$find_dir" -name "*.php" -exec grep -iHc "$VIRUSES_PHP_SIGNATURES" {} \; | grep -v ":0" >> "$VIRUSES_LOG"
-find "$find_dir" -name "*.js" -exec grep -iHc "$VIRUSES_JS_SIGNATURES" {} \; | grep -v ":0" >> "$VIRUSES_LOG"
-find "$find_dir" -name ".htaccess" -exec grep -iHc "midp" {} \; | grep -v ":0" >> "$VIRUSES_LOG"
+find "$find_dir" -type f -name "*.php" -exec grep -iHc "$VIRUSES_PHP_SIGNATURES" {} \; | grep -v ":0" >> "$VIRUSES_LOG"
+find "$find_dir" -type f -name "*.js" -exec grep -iHc "$VIRUSES_JS_SIGNATURES" {} \; | grep -v ":0" >> "$VIRUSES_LOG"
+find "$find_dir" -type f -name ".htaccess" -exec grep -iHc "midp" {} \; | grep -v ":0" >> "$VIRUSES_LOG"
 #find "$find_dir" -name "*.pl" >> "$VIRUSES_LOG"
 
 if [ -s "$VIRUSES_LOG" ]; then
@@ -35,7 +35,9 @@ if [ -s "$VIRUSES_LOG" ]; then
 	cat "$VIRUSES_LOG"
 	rm "$VIRUSES_LOG"
 else
-	echo $find_dir clean.
+	if [ -n "$TERM" ]; then
+		echo $find_dir clean.
+	fi
 fi
 
 exit 0
