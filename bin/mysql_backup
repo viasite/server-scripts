@@ -13,7 +13,6 @@ Usage:
 . /usr/share/server-scripts/lib/init
 use_config_var "DB_BACKUPS_ROOT"
 use_config_var "DB_BACKUPS_LOG"
-use_config_var "DB_BACKUPS_SEND_HOUR"
 use_config_var "DB_BACKUPS_REMOTE_USER"
 use_config_var "DB_BACKUPS_REMOTE_HOST"
 use_config_var "DB_BACKUPS_REMOTE_DIR"

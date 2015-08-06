@@ -5,7 +5,6 @@ MAILTO="popstas@gmail.com"
 # dbdump, dbundump
 DB_BACKUPS_ROOT="/var/backups/sql"
 DB_BACKUPS_LOG="/var/log/mysql_backup.log"
-DB_BACKUPS_SEND_HOUR="17"
 
 DB_BACKUPS_REMOTE_USER="root"
 DB_BACKUPS_REMOTE_HOST="mysql_backup"
