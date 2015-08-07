@@ -11,8 +11,8 @@ use_config_var "DRUPAL_EXCLUDED_FILE"
 temp_file=$(mktemp -t drupal-get-drupals-XXXX)
 trap 'rm -f "$temp_file"' EXIT
 
-find /home -type d -name "sites" \
--mindepth "$DRUPAL_ROOT_LEVEL" -maxdepth "$DRUPAL_ROOT_LEVEL" \
+find /home -mindepth "$DRUPAL_ROOT_LEVEL" -maxdepth "$DRUPAL_ROOT_LEVEL" \
+-type d -name "sites" \
 | sort > "$temp_file"
 
 for site_path in $(cat "$temp_file"); do
