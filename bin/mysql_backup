@@ -88,9 +88,7 @@ send_dbs() {
 		if [ -h "$last_link" ]; then
 			dump_file=$(readlink "$last_link")
 			remote_path="${remote_user_host}:${DB_BACKUPS_REMOTE_DIR}/${db}_${dump_file##*/}"
-			if [ -n "$TERM" ]; then
-				echo rsync "$dump_file" "$remote_path"
-			fi
+			#echo rsync "$dump_file" "$remote_path"
 			rsync "$dump_file" "$remote_path"
 		fi
 	done
