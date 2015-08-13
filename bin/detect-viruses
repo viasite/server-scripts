@@ -16,8 +16,6 @@ fi
 
 if [ $# -gt 0 ]; then find_dir="$1"; else find_dir=/root/virustest; fi
 
-echo Search in $find_dir...
-
 # чистим файл
 > "$VIRUSES_LOG"
 
@@ -34,10 +32,4 @@ if [ -s "$VIRUSES_LOG" ]; then
 	echo Found $count viruses!
 	cat "$VIRUSES_LOG"
 	rm "$VIRUSES_LOG"
-else
-	if [ -n "$TERM" ]; then
-		echo $find_dir clean.
-	fi
 fi
-
-exit 0
