@@ -1,0 +1,83 @@
+#!/bin/bash
+
+set -e
+
+. /usr/share/server-scripts/lib/init
+use_config_var "DRUPAL_ROOT_LEVEL"
+use_config_var "SITE_EXCLUDED_FILE"
+use_config_var "SITE_INFO_FILE"
+
+nginx_sites=$(mktemp -t nginx-sites-XXXX)
+trap 'rm -f "$nginx_sites"' EXIT
+
+NO_EMAIL=${NO_EMAIL:-""}
+
+get_engine() {
+	root_path="$1"
+	if [ -f "$root_path/$SITE_EXCLUDED_FILE" ]; then
+		echo "excluded"
+	elif [ -f "$root_path/configuration.php" ]; then
+		echo "joomla"
+	elif [ -f "$root_path/wp-login.php" ]; then
+		echo "wordpress"
+	elif [ -d "$root_path/sites/all" ]; then
+		echo "drupal"
+	elif [ ! -f "$root_path/index.php" ]; then
+		echo "none"
+	else
+		echo "unknown"
+	fi
+}
+
+get_domain() {
+	root_path="$1"
+	file=$(grep -R -l "$root_path" /etc/nginx/sites-enabled)
+	server_name=$(grep server_name "$file" | tail -1 | awk '{ print $2 }' | sed 's/;//g')
+	decoded_domain=$(echo "$server_name" | tr '[:upper:]' '[:lower:]' | idn -u --quiet)
+	echo "$decoded_domain"
+}
+
+get_email() {
+	if [ -n "$NO_EMAIL" ]; then
+		return 0
+	fi
+
+	root_path="$1"
+	engine=$(get_engine "$root_path")
+
+	if [ -f "$root_path/$SITE_INFO_FILE" ]; then
+		if [ $(grep -c "email.*=" "$root_path/$SITE_INFO_FILE") = 1 ]; then
+			grep "email.*=" "$root_path/$SITE_INFO_FILE" | cut -d'=' -f2 | tr -d "\"' ;"
+		fi
+	fi
+
+	if [ "$engine" = "drupal" ]; then
+		cd "$root_path"
+		if [ "$(drs vget maintenance_mode)" = 1 ]; then
+			echo maintenance_mode
+		else
+			drs vget site_mail
+		fi
+	elif [ "$engine" = "joomla" ]; then
+		config_file="$root_path/configuration.php"
+		grep "mailfrom" "$config_file" | cut -d'=' -f2 | tr -d "\"' ;"
+	fi
+}
+
+main() {
+	grep -R "root " /etc/nginx/sites-enabled \
+	 | cut -d':' -f2 | grep -o "\(\/.*\?\)" | sed 's/;//g' \
+	 | sort | uniq \
+	 > $nginx_sites
+
+	for root_path in $(cat "$nginx_sites"); do
+		engine=$(get_engine "$root_path")
+		domain=$(get_domain "$root_path")
+		email=$(get_email "$root_path")
+		#if [ "$engine" = "none" ]; then continue; fi
+		if [ "$engine" = "excluded" ]; then continue; fi
+		echo -e "$root_path\t$engine\t$domain\t$email"
+	done
+}
+
+main "$@"
