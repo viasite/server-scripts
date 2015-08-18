@@ -7,22 +7,22 @@ Various scripts for debian based shared hosting server.
 
 
 
-# get-sites - список сайтов на хостинге, домены, email адреса
-- Ищет все "root" в `/etc/nginx/sites-enabled`
-- Для каждого `root` достает первый домен (`server_name`)
-- Определяет движок сайта (drupal / joomla / wordpress / unknown / none)
-- Для Drupal достает email из `site_mail`
-- Для Joomla достает email из `configuration.php`
-- Если в корне лежит файл с инфой (по умолчанию `.info`, определяется в `SITE_INFO_FILE`), достает из него email=*
+# get-sites - СЃРїРёСЃРѕРє СЃР°Р№С‚РѕРІ РЅР° С…РѕСЃС‚РёРЅРіРµ, РґРѕРјРµРЅС‹, email Р°РґСЂРµСЃР°
+- РС‰РµС‚ РІСЃРµ "root" РІ `/etc/nginx/sites-enabled`
+- Р”Р»СЏ РєР°Р¶РґРѕРіРѕ `root` РґРѕСЃС‚Р°РµС‚ РїРµСЂРІС‹Р№ РґРѕРјРµРЅ (`server_name`)
+- РћРїСЂРµРґРµР»СЏРµС‚ РґРІРёР¶РѕРє СЃР°Р№С‚Р° (drupal / joomla / wordpress / unknown / none)
+- Р”Р»СЏ Drupal РґРѕСЃС‚Р°РµС‚ email РёР· `site_mail`
+- Р”Р»СЏ Joomla РґРѕСЃС‚Р°РµС‚ email РёР· `configuration.php`
+- Р•СЃР»Рё РІ РєРѕСЂРЅРµ Р»РµР¶РёС‚ С„Р°Р№Р» СЃ РёРЅС„РѕР№ (РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ `.info`, РѕРїСЂРµРґРµР»СЏРµС‚СЃСЏ РІ `SITE_INFO_FILE`), РґРѕСЃС‚Р°РµС‚ РёР· РЅРµРіРѕ email=*
 
-## Использование
-Список, разделенный табами:  
+## РСЃРїРѕР»СЊР·РѕРІР°РЅРёРµ
+РЎРїРёСЃРѕРє, СЂР°Р·РґРµР»РµРЅРЅС‹Р№ С‚Р°Р±Р°РјРё:  
 ```get-sites > /root/log/sites.log```
 
-csv файл:  
+csv С„Р°Р№Р»:  
 ```echo "root_path;engine;domain;email" > /root/log/sites.csv && get-sites | tr -s"\t" ";" >> /root/log/sites.csv```
 
 
 
 # TODO:
-- генерация документации из текста скриптов
+- РіРµРЅРµСЂР°С†РёСЏ РґРѕРєСѓРјРµРЅС‚Р°С†РёРё РёР· С‚РµРєСЃС‚Р° СЃРєСЂРёРїС‚РѕРІ
