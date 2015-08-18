@@ -19,8 +19,11 @@ Various scripts for debian based shared hosting server.
 Список, разделенный табами:  
 ```get-sites > /root/log/sites.log```
 
+Не включать в список new. и old. сайты:  
+``` get-sites | grep "new.\|/old." > /root/log/sites.log```
+
 csv файл:  
-```echo "root_path;engine;domain;email" > /root/log/sites.csv && get-sites | tr -s"\t" ";" >> /root/log/sites.csv```
+```echo "root_path;engine;domain;email" | grep "new.\|/old." > /root/log/sites.csv && get-sites | tr -s"\t" ";" >> /root/log/sites.csv```
 
 
 
