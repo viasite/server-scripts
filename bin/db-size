@@ -9,7 +9,7 @@
 . /usr/share/server-scripts/lib/init
 use_config_var "DB_SIZE_NAMES_FILE"
 use_config_var "DB_SIZE_SIZES_FILE"
-use_config_var "DB_SIZE_CACHE_MINS"
+use_config_var "DB_SIZE_CACHE_MINS" 30
 
 command -v drall >/dev/null 2>&1 || {
 	echo >&2 "drall required but it's not installed, aborting."

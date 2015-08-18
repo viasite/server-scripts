@@ -6,7 +6,7 @@
 
 . /usr/share/server-scripts/lib/init
 use_config_var "DRUPAL_ROOT_LEVEL"
-use_config_var "SITE_EXCLUDED_FILE"
+use_config_var "SITE_EXCLUDED_FILE" ".excluded"
 
 temp_file=$(mktemp -t drupal-get-drupals-XXXX)
 trap 'rm -f "$temp_file"' EXIT

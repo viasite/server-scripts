@@ -4,8 +4,8 @@ set -e
 
 . /usr/share/server-scripts/lib/init
 use_config_var "DRUPAL_ROOT_LEVEL"
-use_config_var "SITE_EXCLUDED_FILE"
-use_config_var "SITE_INFO_FILE"
+use_config_var "SITE_EXCLUDED_FILE" ".excluded"
+use_config_var "SITE_INFO_FILE" ".info"
 
 nginx_sites=$(mktemp -t nginx-sites-XXXX)
 trap 'rm -f "$nginx_sites"' EXIT
