@@ -1,0 +1,65 @@
+#!/bin/bash
+# 24.08.2015
+# TODO: move to server-scripts
+# v0.1
+
+#echo "Press CTRL+C to proceed."
+#trap "pkill -f 'sleep 1h'" INT
+#trap "set +x ; sleep 1h ; set -x" DEBUG
+
+. /usr/share/server-scripts/lib/init
+use_config_var "DRUPAL_PROJECTS_ROOT" "/usr/local/drupal"
+use_config_var "DRUPAL_PROJECTS_BUILD_ROOT" "$DRUPAL_PROJECTS_ROOT/build"
+
+HELP_TEXT="
+Simple replace of drupal update server for drush make.
+
+Сборка tar.gz архивов всех наших модулей.
+
+- Проходит по папкам features,libraries,modules,themes в /usr/local/drupal
+- Каждую подпапку складывает в /usr/local/drupal/build/тип_модуля/имя_модуля/latest.tar.gz
+- Запускается по крону раз в час в 55 минут
+"
+
+if [ "$1" = "--help" ]; then
+	echo "$HELP_TEXT"
+	exit 1
+fi
+
+
+build_project_archive() {
+	project_path="$1"
+	project_name="${project_path##*/}"
+	project_type="$(basename $(dirname "$project_path"))"
+	project_version=$(get_project_version "$project_path")
+	target_dir="$DRUPAL_PROJECTS_BUILD_ROOT/$project_type/$project_name"
+	latest_path="$target_dir/latest.tar.gz"
+
+	#echo "$project_type / $project_name $project_version - '$project_version.tar.gz'"
+	if [ "$project_name" = ".git" ]; then
+		return 0
+	fi
+
+	cd "$project_path"
+	mkdir -p "$target_dir"
+	tar -czf "$latest_path" *
+	if [ -n "$project_version" ]; then
+		cp "$latest_path" "$target_dir/$project_version.tar.gz"
+	fi
+}
+
+get_project_version() {
+	project_path="$1"
+	version=$(find "$project_path" -maxdepth 1 -name "*.info" -exec grep -E '^\s?version ?= ?' {} \; | awk -F'= ' '{ print $2; }' | tr -d '"')
+	if [ $(echo "$version" | wc -l) = 1 ]; then
+		echo "$version"
+	fi
+}
+
+main() {
+	for project_path in $(find $DRUPAL_PROJECTS_ROOT/{features,libraries,modules,themes} -mindepth 1 -maxdepth 1 -type d); do
+		build_project_archive "$project_path"
+	done
+}
+
+main "$@"

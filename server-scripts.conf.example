@@ -22,6 +22,10 @@ VIRUSES_LOG="/var/log/viruses.log"
 VIRUSES_PHP_SIGNATURES="eval(base64_decode\|'base'.(32*2\|eval(stripslashes\|FilesMan\|WSO_VERSION\|\$sF=\"PCT4BA6ODSE_\"\|\$qV=\"stop_\""
 VIRUSES_JS_SIGNATURES="document.write(unescape"
 
+# drupal-build-archives
+DRUPAL_PROJECTS_ROOT=/usr/local/drupal
+DRUPAL_PROJECTS_BUILD_ROOT="$DRUPAL_PROJECTS_ROOT/build"
+
 # drupal-enable-caches
 DRUPAL_CACHE_LIFETIME=300
 DRUPAL_PAGE_CACHE_MAXIMUM_AGE=1800
