@@ -2,12 +2,22 @@
 Various scripts for debian based shared hosting server.
 
 ## Requirements
-- [drupal-scripts](https://github.com/popstas/drupal-scripts)
-- [drall](https://github.com/popstas/drall)
+- [popstas/drupal-scripts](https://github.com/popstas/drupal-scripts)
+- [popstas/drall](https://github.com/popstas/drall)
+
+## Installation
+```
+git clone https://github.com/popstas/server-scripts.git
+cd server-scripts
+./install.sh
+```
+
+It install scripts to `/usr/share/server-scripts`.
+Config placed to `/etc/server-scripts.conf`
 
 
 
-# get-sites - список сайтов на хостинге, домены, email адреса
+## get-sites - список сайтов на хостинге, домены, email адреса
 - Ищет все "root" в `/etc/nginx/sites-enabled`
 - Для каждого `root` достает первый домен (`server_name`)
 - Определяет движок сайта (drupal / joomla / wordpress / unknown / none)
@@ -15,7 +25,7 @@ Various scripts for debian based shared hosting server.
 - Для Joomla достает email из `configuration.php`
 - Если в корне лежит файл с инфой (по умолчанию `.info`, определяется в `SITE_INFO_FILE`), достает из него email=*
 
-## Использование
+### Использование
 Список, разделенный табами:  
 ```get-sites > /root/log/sites.log```
 
@@ -27,5 +37,5 @@ csv файл:
 
 
 
-# TODO:
+## TODO:
 - генерация документации из текста скриптов
