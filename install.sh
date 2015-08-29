@@ -67,7 +67,7 @@ if [ -d "$INSTALL_DIR" ]; then
 	rm -rf "$INSTALL_DIR"
 fi
 
-python -c "import sh" || {
+python -c "import sh" 2>/dev/null || {
 	pip install sh
 }
 
