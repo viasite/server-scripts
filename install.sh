@@ -78,13 +78,13 @@ chmod +x "$INSTALL_DIR"/lib/*
 
 if [ -w "$BIN_PATH" ]; then
 	# TODO: ln -s -f too danger, it rewrites files!
-	find "$INSTALL_DIR"/bin -type f -exec ln -s {} "$BIN_PATH" \;
+	find "$INSTALL_DIR"/bin -type f -exec ln -s {} "$BIN_PATH" \; 2>/dev/null
 fi
 
 if [ ! -e "$CONFIG_PATH" ]; then
 	cp "$PROGRAM_NAME.conf.example" "$CONFIG_PATH"
 else
-	echo "$USER_CONFIG_PATH exists, don't rewrite it."
+	echo "$CONFIG_PATH exists, don't rewrite it."
 fi
 
 echo "Installed $PROGRAM_NAME to $INSTALL_DIR."
