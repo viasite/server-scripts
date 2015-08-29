@@ -5,7 +5,7 @@ PROGRAM_NAME="server-scripts"
 DEFAULT_PREFIX="/usr/share"
 BIN_PATH="/usr/local/bin"
 DRUPAL_SCRIPTS_ROOT=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
-USER_CONFIG_PATH="$HOME/.$PROGRAM_NAME.conf"
+CONFIG_PATH="/etc/$PROGRAM_NAME.conf"
 SCRIPT_ASSUME_YES=""
 
 PREFIX="$DEFAULT_PREFIX"
@@ -81,8 +81,8 @@ if [ -w "$BIN_PATH" ]; then
 	find "$INSTALL_DIR"/bin -type f -exec ln -s {} "$BIN_PATH" \;
 fi
 
-if [ ! -e "$USER_CONFIG_PATH" ]; then
-	cp "$PROGRAM_NAME.conf.example" "$USER_CONFIG_PATH"
+if [ ! -e "$CONFIG_PATH" ]; then
+	cp "$PROGRAM_NAME.conf.example" "$CONFIG_PATH"
 else
 	echo "$USER_CONFIG_PATH exists, don't rewrite it."
 fi
