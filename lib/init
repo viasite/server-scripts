@@ -11,7 +11,7 @@ if is_test; then
 	. "$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )/../$PROGRAM_NAME.conf.example"
 else
 	[ -r "/etc/$PROGRAM_NAME.conf" ] && . "/etc/$PROGRAM_NAME.conf"
-	[ -r "~/.$PROGRAM_NAME.conf" ] && . "~/.$PROGRAM_NAME.conf"
+	[ -r "$HOME/.$PROGRAM_NAME.conf" ] && . "$HOME/.$PROGRAM_NAME.conf"
 fi
 
 usage() {

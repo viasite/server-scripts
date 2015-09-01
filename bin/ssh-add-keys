@@ -6,8 +6,8 @@
 use_config_var "SSH_PUBLIC_KEYS_DIR"
 
 if [ ! -d "$SSH_PUBLIC_KEYS_DIR" ]; then
-	echo >&2 "SSH public keys directory '$SSH_PUBLIC_KEYS_DIR' not exists"
-	exit 1
+	echo >&2 "SSH public keys directory '$SSH_PUBLIC_KEYS_DIR' not exists, create it"
+	mkdir -p "$SSH_PUBLIC_KEYS_DIR"
 fi
 
 if [ $# != 1 ]; then

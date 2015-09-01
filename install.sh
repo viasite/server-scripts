@@ -4,8 +4,8 @@ PROGRAM_NAME="server-scripts"
 
 DEFAULT_PREFIX="/usr/share"
 BIN_PATH="/usr/local/bin"
-DRUPAL_SCRIPTS_ROOT=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
-USER_CONFIG_PATH="$HOME/.$PROGRAM_NAME.conf"
+SOURCE_DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
+CONFIG_PATH="/etc/$PROGRAM_NAME.conf"
 SCRIPT_ASSUME_YES=""
 
 PREFIX="$DEFAULT_PREFIX"
@@ -67,24 +67,24 @@ if [ -d "$INSTALL_DIR" ]; then
 	rm -rf "$INSTALL_DIR"
 fi
 
-python -c "import sh" || {
+python -c "import sh" 2>/dev/null || {
 	pip install sh
 }
 
-cp -R "$DRUPAL_SCRIPTS_ROOT" "$INSTALL_DIR"
+cp -R "$SOURCE_DIR" "$INSTALL_DIR"
 
 chmod +x "$INSTALL_DIR"/bin/*
 chmod +x "$INSTALL_DIR"/lib/*
 
 if [ -w "$BIN_PATH" ]; then
 	# TODO: ln -s -f too danger, it rewrites files!
-	find "$INSTALL_DIR"/bin -type f -exec ln -s {} "$BIN_PATH" \;
+	find "$INSTALL_DIR"/bin -type f -exec ln -s {} "$BIN_PATH" \; 2>/dev/null
 fi
 
-if [ ! -e "$USER_CONFIG_PATH" ]; then
-	cp "$PROGRAM_NAME.conf.example" "$USER_CONFIG_PATH"
+if [ ! -e "$CONFIG_PATH" ]; then
+	cp "$SOURCE_DIR/$PROGRAM_NAME.conf.example" "$CONFIG_PATH"
 else
-	echo "$USER_CONFIG_PATH exists, don't rewrite it."
+	echo "$CONFIG_PATH exists, don't rewrite it."
 fi
 
 echo "Installed $PROGRAM_NAME to $INSTALL_DIR."
