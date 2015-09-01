@@ -1,11 +1,8 @@
 #!/bin/bash
 # 24.08.2015
+# 27.08.2015 - сборка профилей
 # TODO: move to server-scripts
-# v0.1
-
-#echo "Press CTRL+C to proceed."
-#trap "pkill -f 'sleep 1h'" INT
-#trap "set +x ; sleep 1h ; set -x" DEBUG
+# v0.2
 
 . /usr/share/server-scripts/lib/init
 use_config_var "DRUPAL_PROJECTS_ROOT" "/usr/local/drupal"
@@ -16,8 +13,10 @@ Simple replace of drupal update server for drush make.
 
 Сборка tar.gz архивов всех наших модулей.
 
-- Проходит по папкам features,libraries,modules,themes в /usr/local/drupal
+- Проходит по папкам features,libraries,modules,profiles,themes в /usr/local/drupal
 - Каждую подпапку складывает в /usr/local/drupal/build/тип_модуля/имя_модуля/latest.tar.gz
+- Определяет версию модуля и создает архив с конкретной версией. Версия берется из .info файла, для libraries - из файла version в корне библиотеки
+- Профили дополнительно пытается собрать и положить в /usr/local/drupal/build/profiles/имя_модуля_packed/latest.tar.gz
 - Запускается по крону раз в час в 55 минут
 "
 
@@ -45,21 +44,57 @@ build_project_archive() {
 	tar -czf "$latest_path" *
 	if [ -n "$project_version" ]; then
 		cp "$latest_path" "$target_dir/$project_version.tar.gz"
+	else
+		#if [ "$project_type" != "libraries" ]; then
+		echo >&2 "$project_type / $project_name has no version defined"
+		#fi
 	fi
 }
 
 get_project_version() {
 	project_path="$1"
 	version=$(find "$project_path" -maxdepth 1 -name "*.info" -exec grep -E '^\s?version ?= ?' {} \; | awk -F'= ' '{ print $2; }' | tr -d '"')
-	if [ $(echo "$version" | wc -l) = 1 ]; then
+	if [ -n "$version" ] && [ $(echo "$version" | wc -l) = 1 ]; then
 		echo "$version"
+	elif [ -e "$project_path/version" ]; then
+		cat "$project_path/version"
 	fi
 }
 
+build_profile() {
+	project_path="$1"
+	project_name="${project_path##*/}"
+	project_type="$(basename $(dirname "$project_path"))"
+	#project_version=$(get_project_version "$project_path")
+	project_build_dir="$DRUPAL_PROJECTS_BUILD_ROOT/tmp/$project_type/${project_name}_packed"
+	project_makefile="$project_build_dir/${project_name}.make.yml"
+	#target_dir="$DRUPAL_PROJECTS_BUILD_ROOT/$project_type/$project_name"
+	#latest_path="$target_dir/latest.tar.gz"
+
+	if [ -d "$project_build_dir" ]; then
+		rm -rf "$project_build_dir"
+	fi
+	mkdir -p "$DRUPAL_PROJECTS_BUILD_ROOT/tmp/$project_type"
+
+	cp -r "$project_path" "$project_build_dir"
+	cd "$project_build_dir"
+	if [ -f "$project_makefile" ]; then
+		drush7 make "$project_makefile" --no-core --contrib-destination=. "$project_build_dir"
+		build_project_archive "$project_build_dir"
+	fi
+	rm -rf "$project_build_dir"
+}
+
 main() {
-	for project_path in $(find $DRUPAL_PROJECTS_ROOT/{features,libraries,modules,themes} -mindepth 1 -maxdepth 1 -type d); do
+	for project_path in $(find $DRUPAL_PROJECTS_ROOT/{features,libraries,modules,profiles,themes} -mindepth 1 -maxdepth 1 -type d); do
 		build_project_archive "$project_path"
 	done
+
+	#if [ -d "$DRUPAL_PROJECTS_ROOT/profiles" ]; then
+	#	for profile_path in $(find "$DRUPAL_PROJECTS_ROOT/profiles" -mindepth 1 -maxdepth 1 -type d); do
+	#		build_profile "$profile_path"
+	#	done
+	#fi
 }
 
 main "$@"
