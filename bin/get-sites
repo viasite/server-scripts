@@ -54,7 +54,7 @@ get_email() {
 	if [ "$engine" = "drupal" ]; then
 		cd "$root_path"
 		if [ "$(drs vget maintenance_mode)" = 1 ]; then
-			echo maintenance_mode
+			echo "" #maintenance_mode
 		else
 			drs vget site_mail
 		fi
