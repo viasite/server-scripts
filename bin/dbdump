@@ -19,8 +19,8 @@ if [ $# != "1" ]; then
 fi
 
 if [ ! -d "$DB_BACKUPS_ROOT" ]; then
-	echo >&2 "backups root \"$DB_BACKUPS_ROOT\" not found"
-	exit 1
+	echo >&2 "backups root \"$DB_BACKUPS_ROOT\" not found, creating"
+	mkdir -p "$DB_BACKUPS_ROOT"
 fi
 
 DBNAME="$1"
