@@ -1,2 +1,2 @@
 #!/bin/bash
-git init && git add . && git commit -m "first commit" && du -csh .git && git config receive.denyCurrentBranch ignore
+git init && git add . && git commit -m "first commit" && du -csh .git && git config receive.denyCurrentBranch ignore && git config color.ui true
