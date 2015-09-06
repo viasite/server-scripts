@@ -32,12 +32,6 @@ chown -R "$uid"."$gid" "$home"
 find "$home" -type d -exec chmod 755 {} \;
 find "$home" -type f -exec chmod 644 {} \;
 
-#echo "chmod 755 $home/**/*(/)"
-#chmod 755 $home/**/*(/)
-
-#echo "chmod 644 $home/**/*(.)"
-#chmod 644 $home/**/*(.)
-
 echo "chmod 510 $home"
 chmod 550 "$home"
 

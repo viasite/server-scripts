@@ -63,15 +63,16 @@ if [ -d "$INSTALL_DIR" ]; then
 			exit 1
 		fi
 	fi
-
-	rm -rf "$INSTALL_DIR"
 fi
 
 python -c "import sh" 2>/dev/null || {
 	pip install sh
 }
 
-cp -R "$SOURCE_DIR" "$INSTALL_DIR"
+rsync -a "$SOURCE_DIR/" "$INSTALL_DIR" || {
+	echo "Sync files to $INSTALL_DIR failed."
+	exit 1
+}
 
 chmod +x "$INSTALL_DIR"/bin/*
 chmod +x "$INSTALL_DIR"/lib/*
