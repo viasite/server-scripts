@@ -14,7 +14,18 @@ get_domain() {
 	if [ -z "$root_path" ]; then
 		root_path="$PWD"
 	fi
+
 	file=$(grep -R -l "$root_path" /etc/nginx/sites-enabled)
+
+	if [ -z "$file" ]; then
+		echo >&2 "domain not found"
+		exit 1
+	elif [ $(echo "$file" | wc -l) != 1 ]; then
+		echo >&2 "found more than 1 config:"
+		echo >&2 "$file"
+		exit 1
+	fi
+
 	server_name=$(grep server_name "$file" | tail -1 | awk '{ print $2 }' | sed 's/;//g')
 	decoded_domain=$(echo "$server_name" | tr '[:upper:]' '[:lower:]' | idn -u --quiet)
 	echo "$decoded_domain"
