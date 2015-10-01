@@ -1,7 +1,19 @@
 #!/bin/bash
+. /usr/share/server-scripts/lib/init
+
+SCRIPT_HELP="
+Ищет в /etc/nginx/sites-enabled сайт с указанным путем,
+возвращает первый найденный домен.
+
+Использование:
+{0} [site_root_path] - проверка папки, если папка не указана, то проверяется текущая папка.
+"
 
 get_domain() {
 	root_path="$1"
+	if [ -z "$root_path" ]; then
+		root_path="$PWD"
+	fi
 	file=$(grep -R -l "$root_path" /etc/nginx/sites-enabled)
 	server_name=$(grep server_name "$file" | tail -1 | awk '{ print $2 }' | sed 's/;//g')
 	decoded_domain=$(echo "$server_name" | tr '[:upper:]' '[:lower:]' | idn -u --quiet)
