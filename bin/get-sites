@@ -29,14 +29,6 @@ get_engine() {
 	fi
 }
 
-get_domain() {
-	root_path="$1"
-	file=$(grep -R -l "$root_path" /etc/nginx/sites-enabled)
-	server_name=$(grep server_name "$file" | tail -1 | awk '{ print $2 }' | sed 's/;//g')
-	decoded_domain=$(echo "$server_name" | tr '[:upper:]' '[:lower:]' | idn -u --quiet)
-	echo "$decoded_domain"
-}
-
 get_email() {
 	if [ -n "$NO_EMAIL" ]; then
 		return 0
