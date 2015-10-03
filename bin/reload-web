@@ -1,3 +1,5 @@
 #!/bin/bash
 nginx -t && service nginx reload
-service apache2 reload
+command -v apache2 >/dev/null 2>&1 && {
+	service apache2 reload
+}

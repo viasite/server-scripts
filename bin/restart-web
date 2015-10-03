@@ -1,3 +1,5 @@
 #!/bin/bash
 nginx -t && service nginx restart
-apachectl configtest && service apache2 restart
+command -v apache2 >/dev/null 2>&1 && {
+	apachectl configtest && service apache2 restart
+}
