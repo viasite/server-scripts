@@ -45,7 +45,7 @@ fi
 temp_file=$(mktemp -t ssh-add-keys-XXXX)
 trap 'rm -f "$temp_file"' EXIT
 
-find "$SSH_PUBLIC_KEYS_DIR" -type f -exec cat {} >> "$temp_file" \;
+find -L "$SSH_PUBLIC_KEYS_DIR" -type f -exec cat {} >> "$temp_file" \;
 
 sshfile="${homedir}/.ssh/authorized_keys"
 if [ ! -f $sshfile ]; then
