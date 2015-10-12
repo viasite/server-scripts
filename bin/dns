@@ -1,0 +1,34 @@
+#!/bin/bash
+set -eu
+
+HELP="Usage:
+dns domain.tld
+dns x.x.x.x
+
+return sorted list of domain records sorted by type.
+"
+
+dns() {
+	dig "$1" ANY | grep -v '^;' | grep -v '^$' | sort -k4
+}
+
+reverseIp() {
+	echo "$1" | awk 'BEGIN{FS=".";ORS="."} {for (i = NF; i > 0; i--){print $i}}'
+}
+
+main() {
+	domain="${1:-""}"
+
+	if [ -z "$domain" ]; then
+		echo "$HELP"
+		exit 1
+	fi
+
+	echo "$domain" | grep -o '[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}' > /dev/null && {
+		dns "$(reverseIp "$domain")in-addr.arpa"
+	} || {
+		dns "$domain"
+	}
+}
+
+main "$@"
