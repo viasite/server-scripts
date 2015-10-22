@@ -95,7 +95,6 @@ if [ -n "$line" ]; then
 	if [ time_enabled ]; then
 		echo -e "time\tloads\tper_load\tdomain"
 		echo -e "$total_time\t$total_loads\t$total_per_load\n"
-	fi
 	else
 		echo -e "loads\tdomain"
 		echo -e "$total_loads\n"
