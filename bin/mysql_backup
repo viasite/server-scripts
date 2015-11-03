@@ -97,7 +97,7 @@ send_dbs() {
 clean_backups() {
 	dbs="$1"
 	for db in $(echo "$dbs"); do
-		dir="$DB_BACKUPS_ROOT/$(date --date="-2 day" '+%Y/%m/%d')"
+		dir="$DB_BACKUPS_ROOT/$(date --date="-2 day" '+%Y/%m/%d')/$db"
 		if [ -d "$dir" ]; then
 			find "$dir" -name "*.gz" | sort | sed "1 d" | xargs --no-run-if-empty rm
 		fi
