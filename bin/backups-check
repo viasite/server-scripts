@@ -1,0 +1,22 @@
+#!/bin/bash
+
+set -eu
+
+. /usr/share/server-scripts/lib/init
+use_config_var "BACKUPS_CHECK_DIRS"
+use_config_var "MAILTO"
+
+errors=""
+
+for dir in "${BACKUPS_CHECK_DIRS[@]}"; do
+	files="$(find "$dir" -mtime -1 | wc -l)"
+	if [ "$files" -eq 0 ]; then
+		errors="$errors\nnot found new files at $dir"
+	fi
+done
+
+if [ -n "$errors" ]; then
+	echo >&2 -e "$errors"
+	echo "$errors" | mail -s "backups failed" "$MAILTO"
+	exit 1
+fi

@@ -16,8 +16,26 @@ It install scripts to `/usr/share/server-scripts`.
 Config placed to `/etc/server-scripts.conf`
 
 
+## backups-check
+Проверка папок с бекапами на наличие свежих файлов.
 
-## get-sites - список сайтов на хостинге, домены, email адреса
+Скрипт принимает список папок для проверки (из конфига), проверяет, что в каждой из них, 
+Предполагается, что минимум раз в сутки в папках появляются бекапы.
+Если новых файлов не появилось, на email отправляется письмо с предупреждением.
+
+В конфиге папки объявлены bash-массивом, выглядит это так:
+```
+BACKUPS_CHECK_DIRS=( \
+"/path/to/backup" \
+"/path/to/backup_sql" \
+"/path/to/other/backup" \
+)
+```
+
+
+## get-sites
+Список сайтов на хостинге, домены, email адреса.
+####
 - Ищет все "root" в `/etc/nginx/sites-enabled`
 - Для каждого `root` достает первый домен (`server_name`)
 - Определяет движок сайта (drupal / joomla / wordpress / unknown / none)

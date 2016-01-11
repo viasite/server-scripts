@@ -12,6 +12,11 @@ DB_BACKUPS_REMOTE_DIR="/var/backups/sql/remote_host"
 
 DB_BACKUPS_EXCLUDED_DBS="_test$"
 
+# backups-check
+BACKUPS_CHECK_DIRS=( \
+"$DB_BACKUPS_ROOT" \
+)
+
 # db-size
 DB_SIZE_NAMES_FILE="/root/log/drupal_dbs.log"
 DB_SIZE_SIZES_FILE="/root/log/drupal_dbs_sizes.log"
