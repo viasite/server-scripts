@@ -1,0 +1,52 @@
+#!/bin/bash
+
+#set -e
+
+. /usr/share/server-scripts/lib/init
+
+which http &>/dev/null || {
+	echo "script requires httpie (command 'http'), instal it:
+pip install httpie"
+	exit 1
+}
+
+sites=$(NO_EMAIL=1 get-sites)
+
+IFS=$'\n'
+for site in $sites; do
+	root_path=$(echo $site | awk '{print $1}')
+	engine=$(echo $site | awk '{print $2}')
+	domain=$(echo $site | awk '{print $3}')
+	url="http://$domain"
+
+	#if [ "$domain" != "asmetall.viasite.ru" ]; then
+	#    continue
+	#fi
+
+	#echo "$domain check..."
+
+	set +e
+	headers=$(http "$url" --check-status --headers 2> /dev/null)
+	exitcode="$?"
+	set -e
+
+	if [ "$exitcode" -eq 0 ]; then
+		continue
+	fi
+
+	if [ "$exitcode" = 5 ] && \
+	[ "$engine" = "drupal" ] && \
+	[ "$(cd $root_path && drs vget maintenance_mode)" = 1 ]; then
+		echo "$domain in maintenance mode"
+		continue
+	fi
+
+	if [ "$exitcode" = 3 ]; then
+		echo "$domain redirected"
+		#echo "$headers"
+		continue
+	fi
+
+	echo "$domain check failed"
+	echo "$headers"
+done
