@@ -17,6 +17,6 @@ done
 
 if [ -n "$errors" ]; then
 	echo >&2 -e "$errors"
-	echo "$errors" | mail -s "backups failed" "$MAILTO"
+	echo -e "$errors" | mail -s "[alert] server $(hostname -f), backups failed" "$MAILTO"
 	exit 1
 fi
