@@ -1,9 +1,8 @@
 #!/bin/bash
-# 07.07.2013
-# v0.1
 
-if [ -z "$(git diff HEAD)" ]; then
-	git reset --hard
-else
-	git diff --stat HEAD
-fi
+# git diff --name-only выведет дифф с индексом
+# git diff HEAD --name-only выведет фактически измененные файлы
+# команды ниже сбрасывают статусы до фактических
+
+comm -3 <(git diff --name-only | sort) <(git diff HEAD --name-only | sort) | xargs git reset HEAD
+comm -3 <(git diff --name-only | sort) <(git diff HEAD --name-only | sort) | xargs git checkout --
