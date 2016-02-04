@@ -19,12 +19,6 @@ for site in $sites; do
 	domain=$(echo $site | awk '{print $3}')
 	url="http://$domain"
 
-	#if [ "$domain" != "asmetall.viasite.ru" ]; then
-	#    continue
-	#fi
-
-	#echo "$domain check..."
-
 	set +e
 	headers=$(http "$url" --check-status --headers 2> /dev/null)
 	exitcode="$?"

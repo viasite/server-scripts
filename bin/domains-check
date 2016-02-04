@@ -1,0 +1,29 @@
+#!/bin/bash
+set -e
+
+SCRIPT_HELP="
+Check every site domain from 'get-sites' that:
+- nslookup to external DNS server pass
+- domain A IP equals assert IP
+You should run script manually, it always return zero code."
+
+. /usr/share/server-scripts/lib/init
+use_config_var "DOMAINS_CHECK_DNS"
+use_config_var "DOMAINS_CHECK_ASSERT_IP"
+
+DOMAINS_CHECK_DNS="$DOMAINS_CHECK_DNS"
+DOMAINS_CHECK_ASSERT_IP="$DOMAINS_CHECK_ASSERT_IP"
+
+sites=$(NO_EMAIL=1 get-sites)
+
+IFS=$'\n'
+for site in $sites; do
+	domain=$(echo $site | awk '{print $3}')
+	domain_encoded=$(echo "$domain" | idn --quiet)
+
+	a_ip=$(nslookup "$domain_encoded" "$DOMAINS_CHECK_DNS" | grep "Address: " | cut -d' ' -f2)
+
+	if [ "$a_ip" != "$DOMAINS_CHECK_ASSERT_IP" ]; then
+		echo "$domain resolve to $a_ip"
+	fi
+done
