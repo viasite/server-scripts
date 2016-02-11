@@ -6,14 +6,14 @@ usage() {
 	echo "ex. for /home/user/www you should give command \"$0 user\""
 }
 
-if [ $# != "2" ]; then
+if [ $# -lt 1 ]; then
 	usage
 	exit 1
 fi
 
 uid="$1"
 gid="$1"
-nginx_uid="www-data"
+#nginx_uid="www-data"
 home="/home/$uid"
 
 if [ -d "$home/www" ]; then
@@ -33,7 +33,7 @@ find "$home" -type d -exec chmod 755 {} \;
 find "$home" -type f -exec chmod 644 {} \;
 
 echo "chmod 510 $home"
-chmod 550 "$home"
+chmod 510 "$home"
 
 echo "chmod 600 $home/.ssh/authorized_keys"
 chmod 600 "$home/.ssh/authorized_keys"
