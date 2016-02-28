@@ -54,6 +54,10 @@ csv файл:
 ```echo "root_path;engine;domain;email" | grep "new.\|/old." > /root/log/sites.csv && get-sites | tr -s"\t" ";" >> /root/log/sites.csv```
 
 
+## average - измерение среднего времени выполнения команды
+Подробности - http://blog.popstas.ru/blog/2016/02/29/average-time-of-script-execution-in-bash/
+
+
 
 ## domains-check - проверка работоспособности доменов
 Получает все сайты хостинга через `get-sites`, проверяет каждый домен сайта внешним DNS,

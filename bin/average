@@ -1,0 +1,31 @@
+#!/bin/bash
+set -eu
+
+if [ "$#" != 1 ] && [ "$#" != 2 ]; then
+	echo "Usage:
+
+	# run 'command' with 5 cycles
+	average 'command'
+
+	# run 'command' with 3 cycles
+	average 3 'command'
+
+	# run 'command' with 5 cycles, you can also call 'export CYCLES=5' before call 'average'
+	CYCLES=5 average 'command'"
+	exit 1
+fi
+
+if [ "$#" = 1 ]; then
+	cycles=${CYCLES:-5}
+	cmd="$1"
+fi
+
+if [ "$#" = 2 ]; then
+	cycles="$1"
+	cmd="$2"
+fi
+
+# replace " to \"
+cmd=$(echo "$cmd" | sed 's/"/\\"/g')
+
+python -m timeit -n 1 -r ${cycles} -s 'import os' "os.system(\"${cmd}\")"
