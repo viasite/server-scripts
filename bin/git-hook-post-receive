@@ -1,0 +1,81 @@
+#!/bin/bash
+# http://blog.popstas.ru/blog/2016/03/02/git-gitlab-planfix-integration/
+
+get_planfix_email() {
+	msg="$1"
+	task_url=$(echo "$msg" | grep -oE "https:\/\/.*\.planfix\.ru\/task\/[0-9]+" | head -n1)
+	if [ -n "$task_url" ]; then
+		domain=$(echo "$task_url" | tail -c +9 | cut -d'/' -f1)
+		task_id=$(echo "$task_url" | grep -oE "[0-9]+$")
+		task_email="task+${task_id}@${domain}"
+		#domain=$(echo "$task_url" | head -c8 | cut-grep -oE "
+	fi
+	echo $task_email
+}
+
+get_gitlab_url() {
+	is_gitlab="$(git remote show | grep -c "gitlab" )"
+	if [ "$is_gitlab" = 1 ]; then
+		gitlab_url=$(git config remote.gitlab.url \
+			| sed 's/^ssh/http/g' \
+			| sed 's/git@//g' \
+			| sed 's/:[0-9][0-9]*//g' \
+			| sed 's/\.git$//g' )
+
+		echo "$gitlab_url"
+	fi
+}
+
+send_planfix_email() {
+	from="$1"
+	to="$2"
+	body="$3"
+
+	echo "$body" | mail -s "@commit @nonotify" "$to" -aFrom:"$from"
+}
+
+commit_actions() {
+	sha="$1"
+	msg=$(git log --format=%B -n 1 "$sha")
+	from=$(git log --format=%ae -n 1 "$sha")
+	to=$(get_planfix_email "$msg")
+	gitlab_url=$(get_gitlab_url)
+
+	if [ -n "$to" ]; then
+		body="$msg"
+		if [ -n "$gitlab_url" = 1 ]; then
+			body="$body
+
+			${gitlab_url}/commit/${sha}"
+		fi
+
+		send_planfix_email "$from" "$to" "$body"
+	fi
+}
+
+main() {
+	# clean push onto dirty repo
+	which gitclean > /dev/null && gitclean || true
+
+	# walk through received commits
+	# http://stackoverflow.com/questions/8263186/git-post-receive-hook-that-grabs-commit-messages-and-posts-back-to-url
+	while read oval nval ref ; do
+		if expr "$ref" : "^refs/heads/"; then
+			if expr "$oval" : '0*$' >/dev/null
+			then
+				revspec=$nval
+			else
+				revspec=$oval..$nval
+			fi
+			other_branches=$(git for-each-ref --format='%(refname)' refs/heads/ | grep -F -v $ref)
+
+			for revision in `git rev-parse --not $other_branches | git rev-list --stdin $revspec`; do
+				for sha in $(git log --format=%H $revision~1..$revision); do
+					commit_actions "$sha"
+				done
+			done
+		fi
+	done
+}
+
+main "$@"

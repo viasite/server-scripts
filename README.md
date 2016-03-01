@@ -65,6 +65,11 @@ csv файл:
 
 
 
+## git-hook-post-receive - интеграция Git и Planfix
+Подробности - http://blog.popstas.ru/blog/2016/03/02/git-gitlab-planfix-integration/
+
+
+
 ## sites-check - проверка работоспособности сайтов
 Получает все сайты хостинга через `get-sites`, заходит на каждый из них и проверяет на код 200.
 #### Исключения:
