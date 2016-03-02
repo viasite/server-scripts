@@ -31,7 +31,10 @@ send_planfix_email() {
 	to="$2"
 	body="$3"
 
-	echo "$body" | mail -s "@commit @nonotify" "$to" -aFrom:"$from"
+	echo "$body" | mail -s "@commit @nonotify" \
+		-a"Content-Type: text/plain; charset=UTF-8" \
+		-a"From: $from" \
+		"$to"
 }
 
 commit_actions() {
