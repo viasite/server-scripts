@@ -1,6 +1,6 @@
 #!/bin/bash
 readonly PROGRAM_NAME="server-scripts"
-readonly PROGRAM_VERSION="0.2.2"
+readonly PROGRAM_VERSION="0.2.9"
 readonly BATS_TEST_RESULTS_DIR="/tmp/$PROGRAM_NAME"
 
 is_test() {
