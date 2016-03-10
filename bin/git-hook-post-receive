@@ -45,8 +45,13 @@ commit_actions() {
 	gitlab_url=$(get_gitlab_url)
 
 	if [ -n "$to" ]; then
-		body="$msg"
-		if [ -n "$gitlab_url" = 1 ]; then
+		body="$msg
+
+		---
+		commit $(echo "$sha" | head -c 7)
+		"
+
+		if [ -n "$gitlab_url" ]; then
 			body="$body
 
 			${gitlab_url}/commit/${sha}"
