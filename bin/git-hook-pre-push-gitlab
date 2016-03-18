@@ -1,0 +1,8 @@
+#!/bin/bash
+
+remote="$1"
+
+if [ "$remote" != "gitlab" ] && [ "$(git remote show | grep -c "gitlab")" = 1 ]; then
+	git push gitlab master
+fi
+
