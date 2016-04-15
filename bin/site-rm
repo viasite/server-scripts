@@ -1,0 +1,69 @@
+#!/bin/bash
+HELP="site-rm /path/to/site/root
+Или site-rm в папке сайта.
+
+Надо подтверждать каждый шаг.
+
+Удаляет:
+- конфиги из sites-enabled
+- базу данных (только для drupal сайтов)
+- папку сайта
+
+Не делает никаких бэкапов, осторожно!
+"
+
+set -eu
+
+root_path="$1"
+cd $root_path
+root_path="$PWD"
+
+user="$(get_pwd_user)"
+
+nginx=$(grep -R "root $root_path;" /etc/nginx/sites-enabled | cut -d':' -f1)
+apache=$(grep -R "DocumentRoot $root_path" /etc/apache2/sites-enabled | cut -d':' -f1)
+
+echo ""
+if [ -n "$apache" ] && [ -n "$nginx" ]; then
+  read -p "Delete $nginx and $apache (y/n)? " -n 1 -r
+  echo ""
+  if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+    echo "Aborting"
+    exit 1
+  fi
+  rm "$nginx" "$apache"
+else
+  echo "Site was not enabled."
+fi
+
+echo ""
+database=$(drs database-settings database)
+if [ -n "$database" ]; then
+  set +e
+  exists=$(mysql -Brs --execute="SHOW DATABASES LIKE '$database'" | grep -cx "$database")
+  set -e
+
+  if [ "$exists" = 1 ]; then
+    read -p "Delete database $database (y/n)? " -n 1 -r
+    echo ""
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+      echo "Aborting"
+      exit 1
+    fi
+    mysql -e "DROP DATABASE $database;"
+  else
+    echo "Database $database not exists."
+  fi
+else
+  echo "Database not detected."
+fi
+
+echo ""
+read -p "Delete directory $root_path (y/n)? " -n 1 -r
+echo ""
+if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+  echo "Aborting"
+  exit 1
+fi
+cd ..
+rm -rf "$root_path"
