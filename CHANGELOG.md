@@ -1,8 +1,41 @@
 <a name=""></a>
-#  (2016-03-06)
+#  (2016-04-30)
 
+
+
+
+<a name="0.2.14"></a>
+## 0.2.14 (2016-04-30)
+
+* feat(influxdb): influxdb-annotate, new script ([8001859](https://github.com/popstas/server-scripts/commit/8001859))
+* feat(influxdb): influxdb-clientstat, new script ([4c23b6c](https://github.com/popstas/server-scripts/commit/4c23b6c))
+* fix(config): change drupal-enable-caches default config ([d86e386](https://github.com/popstas/server-scripts/commit/d86e386))
+* fix(core): correct default variable in use_config_var ([a2b7cd8](https://github.com/popstas/server-scripts/commit/a2b7cd8))
+* fix(core): support of --help for script with $SCRIPT_HELP defined ([b4b5cf3](https://github.com/popstas/server-scripts/commit/b4b5cf3))
+
+
+
+<a name="0.2.13"></a>
+## 0.2.13 (2016-04-15)
+
+* feat(site): site-rm, new script ([e591cc9](https://github.com/popstas/server-scripts/commit/e591cc9))
+
+
+
+<a name="0.2.12"></a>
+## 0.2.12 (2016-03-18)
+
+* feat(git): git-hook-pre-push-gitlab, automatic push to gitlab ([64c8f7d](https://github.com/popstas/server-scripts/commit/64c8f7d))
+
+
+
+<a name="0.2.11"></a>
+## 0.2.11 (2016-03-10)
+
+* fix(git-hook-post-receive): link to gitlab never included to mail ([170f432](https://github.com/popstas/server-scripts/commit/170f432))
 * add CHANGELOG.md ([009d824](https://github.com/popstas/server-scripts/commit/009d824))
 * git-hook-post-receive, set utf-8 encoding ([54caeb3](https://github.com/popstas/server-scripts/commit/54caeb3))
+* regenerate CHANGELOG.md with conventional-changelog ([ef6138f](https://github.com/popstas/server-scripts/commit/ef6138f))
 
 
 
