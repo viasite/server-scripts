@@ -70,6 +70,18 @@ csv файл:
 
 
 
+## influxdb-annotate - добавление событий в InfluxDB
+Send event from other host for any date:  
+```HOST=hostname.tag influxdb-annotate 'text of event' 'tag1 tag2' '2016-04-28 13:00:00'```
+
+Send event from current host for now date:  
+```influxdb-annotate 'text of event' 'tag1 tag2'```
+
+date is optional, other arguments required  
+default hostname - full machine hostname
+
+
+
 ## site-rm
 Удаляет сайт полностью.
 
@@ -106,3 +118,9 @@ user-setup имя_юзера
 
 ## TODO:
 - генерация документации из текста скриптов
+
+## CONTRIBUTING
+Генерируйте CHANGELOG.md через [conventional-changelog](http://blog.popstas.ru/blog/2016/03/06/changelog-dot-md-generate-from-git-conventions/):
+```
+conventional-changelog -i CHANGELOG.md -s -r 0
+```

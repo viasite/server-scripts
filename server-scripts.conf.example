@@ -47,6 +47,14 @@ SITE_INFO_FILE=".info"
 # get-password
 PASSWORD_LENGTH=12
 
+# influxdb-annotate
+INFLUXDB_HOST="localhost"
+INFLUXDB_PORT=8086
+INFLUXDB_USER=""
+INFLUXDB_PASSWORD=""
+INFLUXDB_DATABASE="telegraf"
+INFLUXDB_MEASUREMENT="event"
+
 # sites-load
 SITES_LOAD_TIME_ENABLED="0"
 SITES_LOAD_LOG_FILE="/var/log/nginx/access.log"
