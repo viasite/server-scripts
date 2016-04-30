@@ -59,7 +59,6 @@ out_metric() {
 main() {
 	logsize="$(wc -l "$logfile_in" | awk '{print $1}')"
 
-	> "$tmpfile"
 	if [ ! -e "$tmpfile" ]; then
 		> "$tmpfile"
 	fi
@@ -111,7 +110,7 @@ main() {
 			str="$str,$(out_metric "$args" init_dom_tree)"
 			str="$str,$(out_metric "$args" load)"
 		fi
-		str="$(echo "$str" | grep -v ',,' | grep -vE ',$')"
+		str="$(echo "$str" | grep -v ',,' | grep -vE ',$' || true)"
 		#str="$(echo "$str")"
 		if [ -n "$str" ]; then
 			echo "$str ${timestamp}$(date +'%N')"
