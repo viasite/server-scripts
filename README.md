@@ -82,6 +82,11 @@ default hostname - full machine hostname
 
 
 
+## influxdb-clientstat - сохранение информации о загрузке страниц в InfluxDB
+Предполагается запуск через telegraf, плагин exec.
+
+
+
 ## site-rm
 Удаляет сайт полностью.
 
