@@ -22,6 +22,7 @@ DB_SIZE_NAMES_FILE="/root/log/drupal_dbs.log"
 DB_SIZE_SIZES_FILE="/root/log/drupal_dbs_sizes.log"
 DB_SIZE_CACHE_MINS=30
 
+# domains-check
 DOMAINS_CHECK_DNS="8.8.8.8"
 DOMAINS_CHECK_ASSERT_IP="your_server_ip"
 
@@ -31,12 +32,12 @@ VIRUSES_PHP_SIGNATURES="eval(base64_decode\|'base'.(32*2\|eval(stripslashes\|Fil
 VIRUSES_JS_SIGNATURES="document.write(unescape"
 
 # drupal-build-archives
-DRUPAL_PROJECTS_ROOT=/usr/local/drupal
+DRUPAL_PROJECTS_ROOT="/usr/local/drupal"
 DRUPAL_PROJECTS_BUILD_ROOT="$DRUPAL_PROJECTS_ROOT/build"
 
 # drupal-enable-caches
-DRUPAL_CACHE_LIFETIME=300
-DRUPAL_PAGE_CACHE_MAXIMUM_AGE=1800
+DRUPAL_CACHE_LIFETIME=43200
+DRUPAL_PAGE_CACHE_MAXIMUM_AGE=300
 
 # drupal-get-drupals
 DRUPAL_ROOT_LEVEL=4 # for /home/user/www/example.com
