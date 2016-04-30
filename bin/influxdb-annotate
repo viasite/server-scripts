@@ -2,7 +2,7 @@
 
 set -eu
 
-HELP="Usage:
+SCRIPT_HELP="Usage:
 
 Send event from other host for any date:
 HOST=hostname.tag influxdb-annotate 'text of event' 'tag1 tag2' '2016-04-28 13:00:00'

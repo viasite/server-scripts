@@ -1,5 +1,5 @@
 #!/bin/bash
-HELP="site-rm /path/to/site/root
+SCRIPT_HELP="site-rm /path/to/site/root
 Или site-rm в папке сайта.
 
 Надо подтверждать каждый шаг.
