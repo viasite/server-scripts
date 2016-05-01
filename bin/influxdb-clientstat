@@ -27,6 +27,7 @@ location /clientstat {
 use_config_var "INFLUXDB_CLIENTSTAT_LOG_FILE" "/var/log/nginx/clientstat.access.log"
 
 measurement="page_load"
+metrics="request first_paint dom_ready init_dom_tree load"
 logfile_in="$INFLUXDB_CLIENTSTAT_LOG_FILE"
 logfile_out="/var/log/telegraf/clientstat.log"
 tmpfile="/tmp/clientstat_last"
@@ -65,12 +66,12 @@ main() {
 
 	if [ ! -r "$logfile_in" ]; then
 		echo "$logfile_in not readable"
-		exit 1
+		exit 2
 	fi
 
 	if [ ! -w "$tmpfile" ]; then
 		echo "$tmpfile not writable"
-		exit 1
+		exit 3
 	fi
 
 	if [ -f "$tmpfile" ]; then
@@ -92,7 +93,7 @@ main() {
 
 	IFS=$'\n'
 	for line in $(tail -n +${last_pos} "$logfile_in" | head -n 100); do
-		domain="$(echo "$line" | cut -d' ' -f1)"
+		domain="$(echo "$line" | cut -d' ' -f1  | tr '[:upper:]' '[:lower:]' | idn -u --quiet)"
 		args="$(echo "$line" | awk '{print $8}' | cut -d'?' -f2)"
 		time="$(echo "$line" | grep -oE '\[.*?\]')"
 		code="$(echo "$line" | cut -d' ' -f10)"
@@ -104,11 +105,13 @@ main() {
 			echo -1 >> /tmp/test
 		else
 			str="$str$connect"
-			str="$str,$(out_metric "$args" request)"
-			str="$str,$(out_metric "$args" first_paint)"
-			str="$str,$(out_metric "$args" dom_ready)"
-			str="$str,$(out_metric "$args" init_dom_tree)"
-			str="$str,$(out_metric "$args" load)"
+			IFS=$' '
+			for metric in $metrics; do
+				value="$(out_metric "$args" "$metric")"
+				if [ -n "$value" ]; then
+					str="$str,$value"
+				fi
+			done
 		fi
 		str="$(echo "$str" | grep -v ',,' | grep -vE ',$' || true)"
 		#str="$(echo "$str")"
