@@ -28,6 +28,8 @@ use_config_var "INFLUXDB_CLIENTSTAT_LOG_FILE" "/var/log/nginx/clientstat.access.
 
 measurement="page_load"
 metrics="request first_paint dom_ready init_dom_tree load"
+value_max=30000
+
 logfile_in="$INFLUXDB_CLIENTSTAT_LOG_FILE"
 logfile_out="/var/log/telegraf/clientstat.log"
 tmpfile="/tmp/clientstat_last"
@@ -100,24 +102,28 @@ main() {
 		timestamp="$(date -d "$(echo "$time" | tr -d '[]' | sed -e 's,/,-,g' -e 's,:, ,')" +"%s")"
 		str="$measurement,domain=$domain,$(out_metric "$args" page) "
 		connect="$(out_metric "$args" connect)"
+
 		if [ "$connect" = "connect=-1" ]; then
+			# connect=0 need for count requests
 			str="${str}connect=0"
-			echo -1 >> /tmp/test
 		else
 			str="$str$connect"
 			IFS=$' '
 			for metric in $metrics; do
 				value="$(out_metric "$args" "$metric")"
-				if [ -n "$value" ]; then
+				if [ -n "$value" ] && [ "$(echo "$value" | grep -c "$metric=-")" = 0 ]; then
+					if [ "$(echo "$value" | grep -o "[0-9]*")" -ge "$value_max" ]; then
+						value="$metric=$value_max"
+					fi
 					str="$str,$value"
 				fi
 			done
 		fi
-		str="$(echo "$str" | grep -v ',,' | grep -vE ',$' || true)"
-		#str="$(echo "$str")"
+
 		if [ -n "$str" ]; then
-			echo "$str ${timestamp}$(date +'%N')"
-			echo "$str ${timestamp}$(date +'%N')" >> "$logfile_out"
+			str="$str ${timestamp}$(date +'%N')"
+			echo "$str"
+			echo "$str" >> "$logfile_out"
 		fi
 	done
 }
