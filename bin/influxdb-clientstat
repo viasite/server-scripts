@@ -76,12 +76,7 @@ main() {
 		exit 3
 	fi
 
-	if [ -f "$tmpfile" ]; then
-		last_pos="$(cat "$tmpfile")"
-	else
-		save_last_pos
-		exit 0
-	fi
+	last_pos="$(cat "$tmpfile")"
 
 	if [ "$logsize" = "$last_pos" ]; then
 		exit 0
@@ -92,6 +87,7 @@ main() {
 	fi
 
 	save_last_pos
+	last_pos=$(($last_pos + 1))
 
 	IFS=$'\n'
 	for line in $(tail -n +${last_pos} "$logfile_in" | head -n 100); do
