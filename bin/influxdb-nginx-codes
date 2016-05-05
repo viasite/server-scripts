@@ -3,7 +3,7 @@ set -eu
 log_path=${1:-"/var/log/nginx/access.log"}
 measurement=${2:-"http_code"}
 
-if [ "$1" = "--help" ]; then
+if [ "${1:-""}" = "--help" ]; then
 	echo "Usage:
 influxdb-nginx-codes [/path/to/log] [measurement_name]
 Default: /var/log/nginx/access.log and http_code"
