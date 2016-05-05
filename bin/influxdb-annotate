@@ -21,7 +21,7 @@ use_config_var "INFLUXDB_PASSWORD"
 use_config_var "INFLUXDB_DATABASE" "telegraf"
 use_config_var "INFLUXDB_MEASUREMENT" "event"
 
-if [ "$#" != 2 ]; then
+if [ "$#" != 2 ] && [ "$#" != 3 ]; then
 	usage
 	exit 1
 fi
@@ -29,7 +29,7 @@ fi
 text="$1"
 tags="$2"
 host="${HOST:-$(hostname -f)}"
-date_input="${4:-""}"
+date_input="${3:-""}"
 
 if [ -n "$date_input" ]; then
 	time="$(date -d "$date_input" +'%s')000000000"
