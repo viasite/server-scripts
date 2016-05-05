@@ -87,6 +87,29 @@ default hostname - full machine hostname
 
 
 
+## influxdb-nginx-codes - передача метрик из nginx-лога (http коды) в influxdb с помощью logster
+Предполагается запуск через telegraf, плагин exec.
+
+- ключ `-d` используется, чтобы вместо подключения к graphite logster писал в stdout,
+- `--graphite-host` может вести на любой хост и порт, это неважно,
+- `SampleLogster` - стандартный парсер, который подошел для нашего формата лога,
+- `cut` - обрезает host:port из вывода, чтобы соответствовать формату graphite.
+
+Конфиг telegraf:
+```
+  exec:
+    commands: ["/usr/local/bin/influxdb-nginx-codes"]
+    data_format: "graphite"
+    templates: ["measurement.field"]
+```
+
+#### Минусы:
+- домены не собираются, то есть сейчас известны только коды по всему серверу
+- немного костыльная обработка вывода, чтобы он зашел в influxdb. Если использовать logster и дальше, думаю, можно за час написать вывод в формате influxdb
+- добавить поддержку тегов (доменов) сложно, этого вообще нет в logster
+
+
+
 ## site-rm
 Удаляет сайт полностью.
 

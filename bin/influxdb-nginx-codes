@@ -1,0 +1,16 @@
+#!/bin/bash
+set -eu
+log_path=${1:-"/var/log/nginx/access.log"}
+measurement=${2:-"http_code"}
+
+if [ "$1" = "--help" ]; then
+	echo "Usage:
+influxdb-nginx-codes [/path/to/log] [measurement_name]
+Default: /var/log/nginx/access.log and http_code"
+	exit 1
+fi
+
+logster -d --state-dir=/var/log/logster -p "$measurement" \
+--output=graphite --graphite-host=graphite:2003 \
+SampleLogster "$log_path" \
+| cut -d' ' -f2-
