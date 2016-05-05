@@ -97,10 +97,10 @@ default hostname - full machine hostname
 
 Конфиг telegraf:
 ```
-  exec:
-    commands: ["/usr/local/bin/influxdb-nginx-codes"]
-    data_format: "graphite"
-    templates: ["measurement.field"]
+[[inputs.exec]]
+    commands = ["/usr/local/bin/influxdb-nginx-codes"]
+    data_format = "graphite"
+    templates = ["measurement.field"]
 ```
 
 #### Минусы:
