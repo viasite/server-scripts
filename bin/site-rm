@@ -12,6 +12,8 @@ SCRIPT_HELP="site-rm /path/to/site/root
 Не делает никаких бэкапов, осторожно!
 "
 
+. /usr/share/server-scripts/lib/init
+
 set -eu
 
 root_path="$1"
