@@ -1,6 +1,40 @@
 <a name=""></a>
-#  (2016-04-30)
+#  (2016-05-12)
 
+
+
+
+<a name="0.2.18"></a>
+## 0.2.18 (2016-05-12)
+
+* feat(backup): zipsite, new script ([7afe2f6](https://github.com/popstas/server-scripts/commit/7afe2f6))
+* docs(monitoring): fixed telegraf config fox influxdb-nginx-codes ([7aa7144](https://github.com/popstas/server-scripts/commit/7aa7144))
+* fix(monitoring): influxdb-nginx-codes, fixed unbound argument ([ad74d74](https://github.com/popstas/server-scripts/commit/ad74d74))
+
+
+
+<a name="0.2.17"></a>
+## 0.2.17 (2016-05-05)
+
+* feat(monitoring): influxdb-nginx-codes, new script ([50e680a](https://github.com/popstas/server-scripts/commit/50e680a))
+* fix(monitoring): influxdb-annotate: make time argument working ([d3d2a61](https://github.com/popstas/server-scripts/commit/d3d2a61))
+
+
+
+<a name="0.2.16"></a>
+## 0.2.16 (2016-05-01)
+
+* fix(influxdb): influxdb-clientstat, domain decode, duplicates, exitcodes ([556847b](https://github.com/popstas/server-scripts/commit/556847b))
+* fix(influxdb): influxdb-clientstat, don't send anomalies ([2869beb](https://github.com/popstas/server-scripts/commit/2869beb))
+* fix(influxdb): influxdb-clientstat, metric duplication ([86ca2a3](https://github.com/popstas/server-scripts/commit/86ca2a3))
+
+
+
+<a name="0.2.15"></a>
+## 0.2.15 (2016-04-30)
+
+* fix(influxdb): influxdb-clientstat, remove test line ([8feac8d](https://github.com/popstas/server-scripts/commit/8feac8d))
+* docs: changelog ([3dfa013](https://github.com/popstas/server-scripts/commit/3dfa013))
 
 
 
