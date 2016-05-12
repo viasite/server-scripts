@@ -1,0 +1,59 @@
+#!/bin/bash
+SCRIPT_HELP="Usage: $0 /path/to/site database_name
+Creates archive in directory, file _database.sql
+Ex. /home/user/www/domain.ru/domain.ru.zip you should give command
+\"$0 /home/user/www/domain.ru database\""
+
+. /usr/share/server-scripts/lib/init
+use_config_var "DB_BACKUPS_ROOT"
+
+set -eu
+
+if [ "$#" = 0 ]; then
+	usage
+	exit 1
+fi
+
+path="$1"
+db_name="${2:-""}"
+zip_name="$(basename "$path")_$(date +%F).zip"
+last_sql_path="$DB_BACKUPS_ROOT/last/$db_name.gz"
+sql_path="$path/_database.sql"
+
+if [ ! -d "$path" ]; then
+	echo "$path not exists"
+	exit 1
+fi
+
+pushd "$path"
+
+echo "Count files..."
+total_files="$(find "$path" | wc -l)"
+
+if [ -z "$db_name" ] && [ -e "sites/default/settings.php" ] && [ -n $(command -v drs) ]; then
+	db_name="$(drs database-settings database)"
+	if [ -n "$db_name" ]; then
+		echo "Detected database: $db_name"
+	fi
+fi
+
+if [ -n "$db_name" ]; then
+	dbdump "$db_name"
+	zcat "$last_sql_path" > "$sql_path"
+	echo "sql dump copied to $sql_path (it will delete after zip)"
+fi
+
+echo "zip $total_files files to $path/$zip_name ..."
+if [ -n $(command -v pv) ]; then
+	zip -5 -r "$zip_name" . | pv -l -s "$total_files" > /dev/null
+else
+	zip -5 -r -q "$zip_name" .
+fi
+
+if [ -e "$sql_path" ]; then
+	rm "$sql_path"
+fi
+echo ""
+ls -lh "$path/$zip_name"
+echo "http://$(get_domain)/$zip_name"
+popd

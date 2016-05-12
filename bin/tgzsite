@@ -7,6 +7,10 @@ if [ $# != "2" ]; then
 	exit 1
 fi
 
+echo ""
+echo "tgzsite deprecated, use zipsite instead."
+echo ""
+
 uid="$1"
 domain="$2"
 home=$(su -c "echo \$HOME" "$uid")

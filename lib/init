@@ -1,6 +1,6 @@
 #!/bin/bash
 readonly PROGRAM_NAME="server-scripts"
-readonly PROGRAM_VERSION="0.2.14"
+readonly PROGRAM_VERSION="0.2.18"
 readonly BATS_TEST_RESULTS_DIR="/tmp/$PROGRAM_NAME"
 
 is_test() {
@@ -31,7 +31,7 @@ usage() {
 use_config_var() {
 	var_name="${1:-""}"
 	default_val="${2:-""}"
-	var_val="$(eval "echo \${$1:-"$default_val"}")"
+	var_val="$(eval "echo \${$var_name:-"$default_val"}")"
 	eval "$var_name=\"$var_val\""
 	#echo "use_config_var: $1 = $var_val"
 
