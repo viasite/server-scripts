@@ -39,7 +39,10 @@ else
 fi
 
 echo ""
-database=$(drs database-settings database)
+database=""
+if [ -e "sites/default/settings.php" ] && [ -n $(command -v drs) ]; then
+	database="$(drs database-settings database)"
+fi
 if [ -n "$database" ]; then
   set +e
   exists=$(mysql -Brs --execute="SHOW DATABASES LIKE '$database'" | grep -cx "$database")
