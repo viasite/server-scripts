@@ -8,7 +8,7 @@ if [ "$1" = '--help' ] || [ $# != 1 ]; then
 fi
 
 istest=0
-exts_all="php module info inc js json css hml html xml htaccess"
+exts_all="php module info inc js json css less hml html xml htaccess"
 exts_default="php module inc js"
 exts="$exts_default"
 
