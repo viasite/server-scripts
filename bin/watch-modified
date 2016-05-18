@@ -1,2 +1,2 @@
 #!/bin/bash
-watch --color --interval 120 "modified | sort -n"
+watch --color --interval 120 "modified | sort -nr"
