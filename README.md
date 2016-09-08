@@ -110,6 +110,18 @@ default hostname - full machine hostname
 
 
 
+## site-rename
+Usage: site-rename /full/path/from /full/path/to
+
+Script will:
+ - check that source directory exists and target directory not exists
+ - change path in nginx and apache2 configs in sites-enabled
+ - change path in crontab tasks
+ - move site directory to new place
+ - reload nginx and apache2
+ - clean drupal cache for target
+
+
 ## site-rm
 Удаляет сайт полностью.
 

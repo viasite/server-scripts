@@ -1,0 +1,89 @@
+#!/bin/bash
+
+set -eu
+
+temp_file=$(mktemp -t site-rename-XXXX)
+trap 'rm -f "$temp_file"' EXIT
+
+main() {
+	if [ $# != "2" ]; then
+		echo "Usage: site-rename /full/path/from /full/path/to"
+		echo ""
+		echo "Script will:"
+		echo " - check that source directory exists and target directory not exists"
+		echo " - change path in nginx and apache2 configs in sites-enabled"
+		echo " - change path in crontab tasks"
+		echo " - move site directory to new place"
+		echo " - reload nginx and apache2"
+		echo " - clean drupal cache for target"
+		exit 1
+	fi
+
+	from="$1"
+	to="$2"
+
+	if [ ! -d "$from" ]; then
+		echo "$from not directory, aborting."
+		exit 1
+	fi
+
+	if [ -e "$to" ]; then
+		echo "$to exists, aborting."
+		exit 1
+	fi
+
+	replace_config "$from" "$to" /etc/nginx/sites-enabled
+	replace_config "$from" "$to" /etc/apache2/sites-enabled
+	mv "$from" "$to"
+	reload-web
+	echo ""
+
+	# must placed after $to directory exists
+	replace_cron "$from" "$to"
+
+	cd "$to"
+	drush cc all
+}
+
+replace_config() {
+	from="$1"
+	to="$2"
+	search_dir="$3"
+
+	search_result=$(grep -R "$from" "$search_dir" | wc -l)
+	if [ "$search_result" != "1" ]; then
+		echo "Results for $from in directory $search_dir != 1, aborting."
+		exit 1
+	fi
+
+	config_file=$(grep -R "$from" "$search_dir" | cut -d':' -f1)
+
+	echo ""
+	echo "Changing $config_file to:"
+	sed "s|$from|$to|g" "$config_file"
+	echo ""
+
+	# real changing config
+	sed -i "s|$from|$to|g" "$config_file"
+}
+
+replace_cron() {
+	user=$(stat -c '%U' "$to")
+	crontab -l -u "$user" > $temp_file
+
+	if [ ! -d "$to" ]; then
+		echo "Target directory not exists yet, aborting."
+		exit 1
+	fi
+
+	if [ $(grep -c "$from" $temp_file) -ge 1 ]; then
+		sed -i "s|$from|$to|g" $temp_file
+		cat "$temp_file" | crontab -u "$user" -
+
+		echo "Found tasks in cron, replaced to:"
+		crontab -l -u "$user"
+		echo ""
+	fi
+}
+
+main "$@"
