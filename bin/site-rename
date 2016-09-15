@@ -64,7 +64,7 @@ replace_config() {
 	echo ""
 
 	# real changing config
-	sed -i "s|$from|$to|g" "$config_file"
+	sed -i --follow-symlinks "s|$from|$to|g" "$config_file"
 }
 
 replace_cron() {
@@ -77,7 +77,7 @@ replace_cron() {
 	fi
 
 	if [ $(grep -c "$from" $temp_file) -ge 1 ]; then
-		sed -i "s|$from|$to|g" $temp_file
+		sed -i --follow-symlinks "s|$from|$to|g" $temp_file
 		cat "$temp_file" | crontab -u "$user" -
 
 		echo "Found tasks in cron, replaced to:"
