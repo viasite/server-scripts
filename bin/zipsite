@@ -34,6 +34,7 @@ if [ -z "$db_name" ] && [ -e "sites/default/settings.php" ] && [ -n $(command -v
 	db_name="$(drs database-settings database)"
 	if [ -n "$db_name" ]; then
 		echo "Detected database: $db_name"
+		last_sql_path="$DB_BACKUPS_ROOT/last/$db_name.gz"
 	fi
 fi
 
