@@ -28,7 +28,7 @@ DOMAINS_CHECK_ASSERT_IP="your_server_ip"
 
 # detect-viruses
 VIRUSES_LOG="/var/log/viruses.log"
-VIRUSES_PHP_SIGNATURES="eval(base64_decode\|'base'.(32*2\|eval(stripslashes\|FilesMan\|WSO_VERSION\|\$sF=\"PCT4BA6ODSE_\"\|\$qV=\"stop_\""
+VIRUSES_PHP_SIGNATURES="eval(base64_decode\|'base'.(32*2\|eval(stripslashes\|FilesMan\|WSO_VERSION\|\$sF=\"PCT4BA6ODSE_\"\|\$qV=\"stop_\"\|=chr("
 VIRUSES_JS_SIGNATURES="document.write(unescape"
 
 # drupal-build-archives
