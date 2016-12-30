@@ -1,5 +1,5 @@
 #!/bin/bash
-# v0.2
+# v0.3
 
 SCRIPT_HELP="
 Backup all databases.
@@ -7,7 +7,7 @@ Backup all databases.
 Usage:
 {0} backup - backup databases
 {0} send - send backups to remote
-{0} clean - clean old backups
+{0} clean [days_to_one] [days] - clean old backups, removes all backups except one older \$days_to_one and all backups older then \$days
 "
 
 . /usr/share/server-scripts/lib/init
@@ -17,10 +17,16 @@ use_config_var "DB_BACKUPS_REMOTE_USER"
 use_config_var "DB_BACKUPS_REMOTE_HOST"
 use_config_var "DB_BACKUPS_REMOTE_DIR"
 use_config_var "DB_BACKUPS_EXCLUDED_DBS"
+use_config_var "DB_BACKUPS_CLEAN_OLDER_DAYS_TO_ONE"
+use_config_var "DB_BACKUPS_CLEAN_OLDER_DAYS"
 use_config_var "MAILTO"
+
+set -eu
 
 DB_BACKUPS_LAST="$DB_BACKUPS_ROOT/last"
 DB_BACKUPS_EXCLUDED_DBS="$DB_BACKUPS_EXCLUDED_DBS information_schema performance_schema"
+DB_BACKUPS_CLEAN_OLDER_DAYS_TO_ONE=${DB_BACKUPS_CLEAN_OLDER_DAYS_TO_ONE:-"2"}
+DB_BACKUPS_CLEAN_OLDER_DAYS=${DB_BACKUPS_CLEAN_OLDER_DAYS:-"365"}
 
 IS_BACKUP=""
 IS_SEND=""
@@ -28,7 +34,10 @@ IS_CLEAN=""
 
 if [ "$1" = "backup" ]; then IS_BACKUP=1
 elif [ "$1" = "send" ]; then IS_SEND=1
-elif [ "$1" = "clean" ]; then IS_CLEAN=1
+elif [ "$1" = "clean" ]; then
+	IS_CLEAN=1
+	CLEAN_OLDER_DAYS_TO_ONE=${2:-"$DB_BACKUPS_CLEAN_OLDER_DAYS_TO_ONE"}
+	CLEAN_OLDER_DAYS=${3:-"$DB_BACKUPS_CLEAN_OLDER_DAYS"}
 else
 	usage
 	exit 1
@@ -94,14 +103,47 @@ send_dbs() {
 	done
 }
 
-clean_backups() {
+# Removes all backups except one in each directory
+clean_backups_to_one() {
 	dbs="$1"
+	days="$2"
+
+	if [ "$days" -eq "$days" ] 2>/dev/null; then
+		true
+	else
+		echo "DB_BACKUPS_CLEAN_OLDER_DAYS_TO_ONE must be an integer"
+		exit 1
+	fi
+
 	for db in $(echo "$dbs"); do
-		dir="$DB_BACKUPS_ROOT/$(date --date="-2 day" '+%Y/%m/%d')/$db"
+		dir="$DB_BACKUPS_ROOT/$(date --date="-${days} day" '+%Y/%m/%d')/$db"
 		if [ -d "$dir" ]; then
 			find "$dir" -name "*.gz" | sort | sed "1 d" | xargs --no-run-if-empty rm
 		fi
 	done
+}
+
+# Removes all backups older $1 days
+clean_backups() {
+	CLEAN_OLDER_DAYS="$1"
+	
+	if [ "$CLEAN_OLDER_DAYS" -eq "$CLEAN_OLDER_DAYS" ] 2>/dev/null; then
+		true
+	else
+		echo "DB_BACKUPS_CLEAN_OLDER_DAYS must be an integer"
+		exit 1
+	fi
+
+	if [ "$CLEAN_OLDER_DAYS" -lt 1 ]; then
+		echo "DB_BACKUPS_CLEAN_OLDER_DAYS must me > 0"
+		exit 1
+	fi
+
+	# remove old backups
+	find "$DB_BACKUPS_ROOT" -name "*.gz" -mtime +${CLEAN_OLDER_DAYS} | sort | xargs --no-run-if-empty rm -r
+
+	# remove empty directories
+	find "$DB_BACKUPS_ROOT" -type d -empty | xargs --no-run-if-empty rmdir
 }
 
 main() {
@@ -127,7 +169,8 @@ main() {
 
 	if [ -n "$IS_CLEAN" ]; then
 		#echo clean_backups
-		clean_backups "$dbs"
+		clean_backups_to_one "$dbs" "$CLEAN_OLDER_DAYS_TO_ONE"
+		clean_backups "$CLEAN_OLDER_DAYS"
 	fi
 
 	return "$error"
