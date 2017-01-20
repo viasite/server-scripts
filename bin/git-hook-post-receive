@@ -1,6 +1,9 @@
 #!/bin/bash
 # http://blog.popstas.ru/blog/2016/03/02/git-gitlab-planfix-integration/
 
+GIT_PLANFIX_USERS_FILE="/usr/local/etc/git_planfix_users.txt"
+PLANFIX_ANALYTIC_NAME="Поминутная работа программиста"
+
 get_planfix_email() {
 	msg="$1"
 	task_url=$(echo "$msg" | grep -oE "https:\/\/.*\.planfix\.ru\/task\/[0-9]+" | head -n1)
@@ -37,12 +40,22 @@ send_planfix_email() {
 		"$to"
 }
 
+get_planfix_name_by_email() {
+	email="$1"
+	if [ -e "$GIT_PLANFIX_USERS_FILE" ]; then
+		# grep email with tab, get text after tab
+		grep "$email"$'\t' $GIT_PLANFIX_USERS_FILE | cut -d$'\t' -f2
+	fi
+}
+
 commit_actions() {
 	sha="$1"
 	msg=$(git log --format=%B -n 1 "$sha")
 	from=$(git log --format=%ae -n 1 "$sha")
 	to=$(get_planfix_email "$msg")
 	gitlab_url=$(get_gitlab_url)
+
+	author_name=$(get_planfix_name_by_email "$from")
 
 	if [ -n "$to" ]; then
 		body="$msg
@@ -54,7 +67,12 @@ commit_actions() {
 		if [ -n "$gitlab_url" ]; then
 			body="$body
 
-			${gitlab_url}/commit/${sha}"
+			${gitlab_url}/commit/${sha}
+			---
+			Вид работы: $PLANFIX_ANALYTIC_NAME
+			Email: $from
+			Дата: $(date '+%Y-%m-%d')
+			Автор: $author_name"
 		fi
 
 		send_planfix_email "$from" "$to" "$body"
