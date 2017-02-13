@@ -67,7 +67,12 @@ commit_actions() {
 		if [ -n "$gitlab_url" ]; then
 			body="$body
 
-			${gitlab_url}/commit/${sha}
+			${gitlab_url}/commit/${sha}"
+		fi
+
+		if [ -n "$PLANFIX_ANALYTIC_NAME" ] && [ -n "$author_name" ]; then
+			body="$body
+
 			---
 			Вид работы: $PLANFIX_ANALYTIC_NAME
 			Email: $from
