@@ -65,6 +65,11 @@ csv файл:
 
 
 
+## git-extract-subproject - извлечение одной из папок в git репозитории в отдельный репозиторий с сохранением истории
+Подробности - http://blog.popstas.ru/blog/2017/02/22/git-extract-subproject-preserving-history/
+
+
+
 ## git-hook-post-receive - интеграция Git и Planfix
 Подробности - http://blog.popstas.ru/blog/2016/03/02/git-gitlab-planfix-integration/
 Чтобы ставилась выработка, нужно положить файл со строками "email	Фамилия Имя", разделенный табами, в /usr/local/etc/git_planfix_users.txt

@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+
+set -eu
+
+if [ $# != 2 ]; then
+	echo "Usage: $0 subproject_path_in_big_project subproject_name"
+	echo "ex: git-extract-subproject sites/all/mymodule mymodule"
+	echo "Script should be run in project directory, subproject will be placed in project parent directory"
+	exit 1
+fi
+
+big_project="$(basename "$PWD")"
+subproject_path_in_big_project="$1"
+subproject_name="$2"
+
+cd ..
+project_source="$subproject_name-source"
+
+if [ -e "$project_source" ] || [ -e "$subproject_name" ]; then
+	echo "Error: one of directories exists: $PWD/$project_source or $PWD/$subproject_name, please choose other names"
+	exit 1
+fi
+
+echo ""
+echo "# clone project:"
+git clone "$big_project" "$project_source"
+cd "$project_source"
+
+echo ""
+echo "# filter all except subproject:"
+git filter-branch --subdirectory-filter "$subproject_path_in_big_project" -- --all
+
+echo ""
+echo "# create clean subproject repository:"
+cd ..
+mkdir "$subproject_name"
+cd "$subproject_name"
+git init
+
+echo ""
+echo "# pull from source to subproject:"
+git remote add source "../$project_source"
+git remote update
+git pull source master
+
+echo ""
+echo "# cleanup..."
+git remote remove source
+cd ..
+rm -rf "$project_source"
+
+echo ""
+echo "subproject placed to $PWD"
