@@ -3,13 +3,15 @@
 # 10.12.2014
 # v0.2
 
+set -eu
+
 function usage(){
 	echo "Usage: $0 scandir dir_for_logs"
 	echo "$0 /home /var/log/scandir"
 	exit 1
 }
 
-if [ $# -lt 2 ] || [ $1 = '--help' ]; then
+if [ $# -lt 2 ] || [ "$1" = '--help' ]; then
 	usage
 fi
 
@@ -28,10 +30,10 @@ for dir in $(find "$scandir" -maxdepth 1 -mindepth 1 -type d | sort); do
 	find "$dir" -type d > "$log_dir$dir/directories"
 	find "$dir" > "$log_dir$dir/all"
 	TIME2=$(($(date +%s) - $TIME))
-	echo $TIME2 > "$log_dir$dir/time"
+	echo "$TIME2" > "$log_dir$dir/time"
 
 	# all
-	out="$dir $(cat "$log_dir$dir/time") $(wc -l "$log_dir$dir/directories") $(wc -l "$log_dir$dir/all")"
+	out="$dir $(cat "$log_dir$dir/time") $(cat "$log_dir$dir/directories" | wc -l) $(cat "$log_dir$dir/all" | wc -l)"
 	echo $out
 	echo $out >> "$log_dir/scandir.log"
 done
