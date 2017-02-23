@@ -8,11 +8,11 @@ if [ "$#" -lt 2 ] || [  "$1" = "--help" ]; then
 	echo "Find directories and execute commands in each directory"
 	echo "You may not write '-type d'"
 	echo ""
-	echo "Usage: [NO_ERRORS=1] find-foreach search_path [find args] 'command'"
+	echo "Usage: [SKIP_ERRORS=1] find-foreach search_path [find args] 'command'"
 	echo "Example: find-foreach /home -name .git 'cd .. && git gc'"
 	echo ""
 	echo "Script will exit if error while command execution occured."
-	echo "You can pass NO_ERRORS=1 envvar for allow errors"
+	echo "You can pass SKIP_ERRORS=1 envvar for allow errors"
 	exit 1
 fi
 
