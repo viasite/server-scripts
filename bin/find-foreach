@@ -1,0 +1,37 @@
+#!/bin/bash
+
+if [ -z "$SKIP_ERRORS" ]; then
+	set -eu
+fi
+
+if [  "$1" = "--help" ] || [ "$#" -lt 2 ]; then
+	echo "Find directories and execute commands in each directory"
+	echo "You may not write '-type d'"
+	echo ""
+	echo "Usage: [NO_ERRORS=1] find-foreach search_path [find args] 'command'"
+	echo "Example: find-foreach /home -name .git 'cd .. && git gc'"
+	echo ""
+	echo "Script will exit if error while command execution occured."
+	echo "You can pass NO_ERRORS=1 envvar for allow errors"
+	exit 1
+fi
+
+root_path="$PWD"
+color='\033[1;37m'
+nc='\033[0m'
+
+temp_file=$(mktemp -t find-foreach-XXXX)
+trap 'rm -f "$temp_file"' EXIT
+
+args_length=$(($#-1))
+find_args="${@:1:$args_length} -type d"
+command="${@: -1}" # last arg
+echo "$command" > "$temp_file"
+
+for path in $(find $find_args); do
+	cd "$path"
+	printf "\n${color}$PWD${nc}\n"
+	source "$temp_file"
+	cd "$root_path"
+done
+
