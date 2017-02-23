@@ -4,7 +4,7 @@ if [ -z "$SKIP_ERRORS" ]; then
 	set -eu
 fi
 
-if [  "$1" = "--help" ] || [ "$#" -lt 2 ]; then
+if [ "$#" -lt 2 ] || [  "$1" = "--help" ]; then
 	echo "Find directories and execute commands in each directory"
 	echo "You may not write '-type d'"
 	echo ""
