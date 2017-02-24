@@ -28,10 +28,16 @@ find_args="${@:1:$args_length} -type d"
 command="${@: -1}" # last arg
 echo "$command" > "$temp_file"
 
-for path in $(find $find_args); do
+echo "Searching..."
+results="$(find $find_args | sort)"
+total="$(echo "$results" | wc -l)"
+current=1
+echo "Found $total results.";
+
+for path in $results; do
 	cd "$path"
-	printf "\n${color}$PWD${nc}\n"
+	printf "\n${color}$PWD${nc} ($current / $total)\n"
 	source "$temp_file"
 	cd "$root_path"
+	current=$(($current + 1))
 done
-
