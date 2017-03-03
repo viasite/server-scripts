@@ -1,6 +1,6 @@
 #!/bin/bash
 # all
-MAILTO="popstas@gmail.com"
+MAILTO="mail@example.com"
 
 # dbdump, dbundump
 DB_BACKUPS_ROOT="/var/backups/sql"

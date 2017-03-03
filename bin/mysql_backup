@@ -19,7 +19,6 @@ use_config_var "DB_BACKUPS_REMOTE_DIR"
 use_config_var "DB_BACKUPS_EXCLUDED_DBS"
 use_config_var "DB_BACKUPS_CLEAN_OLDER_DAYS_TO_ONE"
 use_config_var "DB_BACKUPS_CLEAN_OLDER_DAYS"
-use_config_var "MAILTO"
 
 set -eu
 
@@ -87,6 +86,19 @@ dump_dbs() {
 }
 
 send_dbs() {
+	if [ -z "$DB_BACKUPS_REMOTE_USER" ]; then
+		echo >&2 "DB_BACKUPS_REMOTE_USER not defined in config, aborting"
+		exit 1
+	fi
+	if [ -z "$DB_BACKUPS_REMOTE_HOST" ]; then
+		echo >&2 "DB_BACKUPS_REMOTE_HOST not defined in config, aborting"
+		exit 1
+	fi
+	if [ -z "$DB_BACKUPS_REMOTE_DIR" ]; then
+		echo >&2 "DB_BACKUPS_REMOTE_DIR not defined in config, aborting"
+		exit 1
+	fi
+
 	remote_user_host="${DB_BACKUPS_REMOTE_USER}@${DB_BACKUPS_REMOTE_HOST}"
 	ssh "$remote_user_host" mkdir -p "$DB_BACKUPS_REMOTE_DIR"
 
