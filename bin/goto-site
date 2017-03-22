@@ -1,0 +1,6 @@
+#!/bin/bash
+
+path="$1"
+user=$(stat -c '%U' "$path")
+cd "$path"
+su "$user"
