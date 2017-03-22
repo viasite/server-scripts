@@ -1,4 +1,4 @@
 #!/usr/bin/env bash
 
 SITES_FILE=${SITES_FILE:-/usr/local/drupal/sites.csv}
-zsh-goto-site $(cat "$SITES_FILE" | grep -v root_path | cut -d';' -f1 | fzf --ansi --preview "cd {}; ls -l")
+goto-site $(cat "$SITES_FILE" | grep -v root_path | cut -d';' -f1 | fzf --ansi --preview "cd {}; ls -l")
