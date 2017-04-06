@@ -1,11 +1,17 @@
 #!/bin/bash
+HELP="
+Usage:      dbundump /path/to/sql.gz database
+If you unbackup test database, you can skip dbdump existing database:
+NO_BACKUP=1 dbundump /path/to/sql.gz database"
+
 if [ $# != "2" ]; then
-    echo 'Usage: $0 /path/to/sql.gz database'
+    echo >&2 "$HELP"
     exit 1
 fi
 
 GZFILE="$1"
 DBNAME="$2"
+DBNAME_TEMP="${DBNAME}_temp"
 
 if [ ! -e "$GZFILE" ]; then
 	echo >&2 "File $GZFILE not exists"
@@ -17,25 +23,40 @@ if [ -L "$GZFILE" ]; then
 	GZFILE="$(readlink -f "$GZFILE")"
 fi
 
-exists=$(mysql -Brs --execute="SHOW DATABASES LIKE '$DBNAME'" | grep -cx "$DBNAME")
+exists=$(mysql -Brs -e "SHOW DATABASES LIKE '$DBNAME'" | grep -cx "$DBNAME")
 
-if [ "$exists" = 1 ]; then
-	echo dbdump $DBNAME
-	dbdump "$DBNAME"
+# create temp database
+mysql -e "CREATE DATABASE $DBNAME_TEMP"
 
-	echo DROP DATABASE $DBNAME
-	mysql --execute="DROP DATABASE $DBNAME"
-fi
-
-echo CREATE DATABASE $DBNAME
-mysql --execute="CREATE DATABASE $DBNAME"
-
-echo "zcat $GZFILE | mysql $DBNAME"
+# restore backup to temp database
+echo "zcat $GZFILE | mysql $DBNAME_TEMP"
 if [ -z $(command -v pv) ]; then
-	zcat "$GZFILE" | mysql "$DBNAME"
+	zcat "$GZFILE" | mysql "$DBNAME_TEMP"
 else
 	size_compressed=$(stat --format="%s" "$GZFILE")
 	size_uncompressed=$(zcat "$GZFILE" | wc -c)
 	echo "Unrchive from $(( $size_compressed / 1048576 ))MB to $(( $size_uncompressed / 1048576 ))MB"
-	zcat "$GZFILE" | pv --progress --size $size_uncompressed --name '  Importing.. ' | mysql "$DBNAME"
+	zcat "$GZFILE" | pv --progress --size $size_uncompressed --name '  Importing.. ' | mysql "$DBNAME_TEMP"
 fi
+
+if [ "$exists" = 1 ]; then
+	# backup exists database
+	if [ -z "$NO_BACKUP" ]; then
+		echo "dbdump $DBNAME"
+		dbdump "$DBNAME"
+	else
+		echo "Skip existing database backup (NO_BACKUP envvar defined)"
+	fi
+
+	# drop exists database
+	echo "DROP DATABASE $DBNAME"
+	mysql -e "DROP DATABASE $DBNAME"
+fi
+mysql -e "CREATE DATABASE $DBNAME"
+
+# rename temp database
+echo "Rename $DBNAME_TEMP to $DBNAME"
+for table in $(mysql -s -N -e "use $DBNAME_TEMP; show tables from $DBNAME_TEMP;"); do
+	mysql -s -N -e "use $DBNAME_TEMP; rename table $DBNAME_TEMP.$table to $DBNAME.$table;"
+done
+mysql -e "DROP DATABASE $DBNAME_TEMP"
