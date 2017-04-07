@@ -3,3 +3,7 @@ nginx -t && service nginx reload
 command -v apache2 >/dev/null 2>&1 && {
 	service apache2 reload
 }
+
+command -v php-fpm7.0 >/dev/null 2>&1 && {
+	service php7.0-fpm reload
+}
