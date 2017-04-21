@@ -1,6 +1,6 @@
 #!/bin/bash
 
-path="$1"
+path="${1:-$PWD}"
 user=$(stat -c '%U' "$path")
 cd "$path"
 su "$user"
