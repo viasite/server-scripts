@@ -15,6 +15,20 @@ cd server-scripts
 It install scripts to `/usr/share/server-scripts`.
 Config placed to `/etc/server-scripts.conf`
 
+### Install with ansible
+You can install server scripts with [viasite-ansible.server-scripts](https://github.com/viasite-ansible/ansible-role-server-scripts) role.
+
+### Autocompletion
+You can add autocompletion for zsh with antigen:
+```
+antigen bundle viasite/server-scripts
+```
+
+Or install [viasite-ansible.zsh](https://github.com/viasite-ansible/ansible-role-zsh) role.
+
+
+
+# Docs for several scripts
 
 ## backups-check
 Проверка папок с бекапами на наличие свежих файлов.
