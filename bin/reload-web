@@ -1,9 +1,9 @@
 #!/bin/bash
-nginx -t && service nginx reload
+nginx -t && service nginx reload && echo "nginx: service reloaded"
 command -v apache2 >/dev/null 2>&1 && {
-	service apache2 reload
+	service apache2 reload && echo "apache: service reloaded"
 }
 
 command -v php-fpm7.0 >/dev/null 2>&1 && {
-	service php7.0-fpm reload
+	service php7.0-fpm reload && echo "php-fpm: service reloaded"
 }
