@@ -24,6 +24,9 @@ IFS=', ' read -a array <<< "$exts"
 exts_find=""
 isfirst=1
 
+echo "Consider using 'ag' - https://github.com/ggreer/the_silver_searcher"
+echo ""
+
 echo text = \"$1\"
 echo exts = \"$exts\"
 for ext in "${array[@]}"
