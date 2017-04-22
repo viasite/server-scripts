@@ -1,6 +1,24 @@
 <a name=""></a>
-#  (2017-04-06)
+#  (2017-04-22)
 
+
+
+
+<a name="0.3.1"></a>
+## 0.3.1 (2017-04-22)
+
+* feat: completions for dbundump, mysql_backup, zipsite ([aa1e698](https://github.com/popstas/server-scripts/commit/aa1e698))
+* fix: deprecate grepcode in favour of using ag (the_silver_searcher) ([e3a8095](https://github.com/popstas/server-scripts/commit/e3a8095))
+
+
+
+<a name="0.3.0"></a>
+# 0.3.0 (2017-04-22)
+
+* feat(reload-web): add reload service php7.0-fpm ([fde3b41](https://github.com/popstas/server-scripts/commit/fde3b41))
+* feat: zsh completions plugin: dbdump, user-setup ([1ab85d3](https://github.com/popstas/server-scripts/commit/1ab85d3))
+* fix: allow to exec goto-site without arguments from site root ([cbb09bb](https://github.com/popstas/server-scripts/commit/cbb09bb))
+* docs: update changelog ([a9c994b](https://github.com/popstas/server-scripts/commit/a9c994b))
 
 
 
