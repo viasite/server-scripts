@@ -9,9 +9,11 @@ return sorted list of domain records sorted by type.
 "
 
 dns() {
+	set +e
 	for type in a aaaa cname mx ns ptr txt; do
 		dig "$1" "$type" | grep -v '^;' | grep -v '^$'
 	done
+	set -e
 }
 
 reverseIp() {
