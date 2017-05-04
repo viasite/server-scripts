@@ -1,9 +1,10 @@
 #!/bin/bash
-nginx -t && service nginx reload && echo "nginx: service reloaded"
-command -v apache2 >/dev/null 2>&1 && {
-	service apache2 reload && echo "apache: service reloaded"
-}
+nginx -t && service nginx reload && echo "nginx: service reloaded" || exit 1
 
-command -v php-fpm7.0 >/dev/null 2>&1 && {
-	service php7.0-fpm reload && echo "php-fpm: service reloaded"
-}
+if command -v apache2 >/dev/null 2>&1; then
+	service apache2 reload && echo "apache: service reloaded" || exit 1
+fi
+
+if command -v php-fpm7.0 >/dev/null 2>&1; then
+	service php7.0-fpm reload && echo "php-fpm: service reloaded" || exit 1
+fi
