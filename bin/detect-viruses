@@ -6,6 +6,10 @@
 . /usr/share/server-scripts/lib/init
 use_config_var "VIRUSES_LOG"
 use_config_var "MAILTO"
+use_config_var "VIRUSES_PHP_SIGNATURES"
+use_config_var "VIRUSES_PHP_SIGNATURES_EXCLUDED"
+use_config_var "VIRUSES_PHP_FILES_EXCLUDED"
+use_config_var "VIRUSES_JS_SIGNATURES"
 
 if [ $# == 0 ]; then
 	echo Usage: $0 dir
@@ -21,7 +25,12 @@ if [ $# -gt 0 ]; then find_dir="$1"; else find_dir=/root/virustest; fi
 
 # chr(101 - был вирус на эту строку, но вместе с ним еще 20 нормальных файлов детектится, надо переписать, пример есть в /root/virustest/virus/fancy_shadow_e.php
 
-find "$find_dir" -type f -name "*.php" -exec grep -iHc "$VIRUSES_PHP_SIGNATURES" {} \; | grep -v ":0" >> "$VIRUSES_LOG"
+for file in $(find "$find_dir" -type f -name "*.php" -exec grep -il "$VIRUSES_PHP_SIGNATURES" {} \;); do
+  if echo "$file" | grep -v "$VIRUSES_PHP_FILES_EXCLUDED" > /dev/null; then
+    grep -iHc "$VIRUSES_PHP_SIGNATURES_EXCLUDED" "$file" | grep ":0" | tr -d ':0' >> "$VIRUSES_LOG"
+  fi
+done
+#find "$find_dir" -type f -name "*.php" -exec grep -iHc "$VIRUSES_PHP_SIGNATURES" {} \; | grep -v ":0" >> "$VIRUSES_LOG"
 find "$find_dir" -type f -name "*.js" -exec grep -iHc "$VIRUSES_JS_SIGNATURES" {} \; | grep -v ":0" >> "$VIRUSES_LOG"
 find "$find_dir" -type f -name ".htaccess" -exec grep -iHc "midp" {} \; | grep -v ":0" >> "$VIRUSES_LOG"
 #find "$find_dir" -name "*.pl" >> "$VIRUSES_LOG"
