@@ -6,7 +6,7 @@
 . /usr/share/server-scripts/lib/init
 use_config_var "VIRUSES_LOG"
 use_config_var "MAILTO"
-use_config_var "VIRUSES_PHP_SIGNATURES"
+#use_config_var "VIRUSES_PHP_SIGNATURES" # don't uncomment, it breaks lines like "\$asd=asd"
 use_config_var "VIRUSES_PHP_SIGNATURES_EXCLUDED"
 use_config_var "VIRUSES_PHP_FILES_EXCLUDED"
 use_config_var "VIRUSES_JS_SIGNATURES"
@@ -25,13 +25,26 @@ if [ $# -gt 0 ]; then find_dir="$1"; else find_dir=/root/virustest; fi
 
 # chr(101 - был вирус на эту строку, но вместе с ним еще 20 нормальных файлов детектится, надо переписать, пример есть в /root/virustest/virus/fancy_shadow_e.php
 
-for file in $(find "$find_dir" -type f -name "*.php" -exec grep -il "$VIRUSES_PHP_SIGNATURES" {} \;); do
-  if echo "$file" | grep -v "$VIRUSES_PHP_FILES_EXCLUDED" > /dev/null; then
-    grep -iHc "$VIRUSES_PHP_SIGNATURES_EXCLUDED" "$file" | grep ":0" | tr -d ':0' >> "$VIRUSES_LOG"
-  fi
-done
+if [ -n "$VIRUSES_PHP_SIGNATURES" ]; then
+	# нашлись файлы
+	for file in $(find "$find_dir" -type f -name "*.php" -exec grep -il "$VIRUSES_PHP_SIGNATURES" {} \;); do
+		# файл не в исключениях или нет списка файлов-исключений
+		if [ -z "$VIRUSES_PHP_FILES_EXCLUDED" ] || [ "$(echo "$file" | grep -c "$VIRUSES_PHP_FILES_EXCLUDED")" = 0 ]; then
+			# нет списка строк-исключений или не нашлись
+			if [ -z "$VIRUSES_PHP_SIGNATURES_EXCLUDED" ] || [ "$(grep -ic "$VIRUSES_PHP_SIGNATURES_EXCLUDED" "$file")" = 0 ]; then
+				echo "$file" >> "$VIRUSES_LOG"
+				grep -in "$VIRUSES_PHP_SIGNATURES" "$file" >> "$VIRUSES_LOG"
+				echo "" >> "$VIRUSES_LOG"
+			fi
+		fi
+	done
+fi
+
 #find "$find_dir" -type f -name "*.php" -exec grep -iHc "$VIRUSES_PHP_SIGNATURES" {} \; | grep -v ":0" >> "$VIRUSES_LOG"
-find "$find_dir" -type f -name "*.js" -exec grep -iHc "$VIRUSES_JS_SIGNATURES" {} \; | grep -v ":0" >> "$VIRUSES_LOG"
+if [ -n "$VIRUSES_JS_SIGNATURES" ]; then
+	find "$find_dir" -type f -name "*.js" -exec grep -iHc "$VIRUSES_JS_SIGNATURES" {} \; | grep -v ":0" >> "$VIRUSES_LOG"
+fi
+
 find "$find_dir" -type f -name ".htaccess" -exec grep -iHc "midp" {} \; | grep -v ":0" >> "$VIRUSES_LOG"
 #find "$find_dir" -name "*.pl" >> "$VIRUSES_LOG"
 
