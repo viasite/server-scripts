@@ -9,7 +9,7 @@ use_config_var "MAILTO"
 errors=""
 
 for dir in "${BACKUPS_CHECK_DIRS[@]}"; do
-	files="$(find "$dir" -mtime -1 | wc -l)"
+	files="$(find "$dir" -mtime -1 -print -quit | wc -l)"
 	if [ "$files" -eq 0 ]; then
 		errors="$errors\nnot found new files at $dir"
 	fi
