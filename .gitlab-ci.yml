@@ -2,6 +2,8 @@
 "adeploy server-scripts":
   tags:
     - prod
+  environment:
+    name: prod
   stage: deploy
   script:
     - ANSIBLE_STDOUT_CALLBACK=actionable ansible-deploy server-scripts --ssh-common-args="-i /srv/docker/gitlab/keys/prod/id_rsa"
