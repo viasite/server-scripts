@@ -34,6 +34,10 @@ build_project_archive() {
 	target_dir="$DRUPAL_PROJECTS_BUILD_ROOT/$project_type/$project_name"
 	latest_path="$target_dir/latest.tar.gz"
 
+	if [ ! -d "$project_path" ]; then
+		return 0
+	fi
+
 	#echo "$project_type / $project_name $project_version - '$project_version.tar.gz'"
 	if [ "$project_name" = ".git" ]; then
 		return 0
