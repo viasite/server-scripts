@@ -28,16 +28,16 @@ fi
 
 build_project_archive() {
 	project_path="$1"
-	project_name="${project_path##*/}"
-	project_type="$(basename $(dirname "$project_path"))"
-	project_version=$(get_project_version "$project_path")
-	target_dir="$DRUPAL_PROJECTS_BUILD_ROOT/$project_type/$project_name"
-	latest_path="$target_dir/latest.tar.gz"
 
 	if [ ! -d "$project_path" ]; then
 		return 0
 	fi
 
+	project_name="${project_path##*/}"
+	project_type="$(basename $(dirname "$project_path"))"
+	project_version=$(get_project_version "$project_path")
+	target_dir="$DRUPAL_PROJECTS_BUILD_ROOT/$project_type/$project_name"
+	latest_path="$target_dir/latest.tar.gz"
 	#echo "$project_type / $project_name $project_version - '$project_version.tar.gz'"
 	if [ "$project_name" = ".git" ]; then
 		return 0
