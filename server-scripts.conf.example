@@ -37,6 +37,7 @@ VIRUSES_JS_SIGNATURES="document.write(unescape"
 
 # drupal-build-archives
 DRUPAL_PROJECTS_ROOT="/usr/local/drupal"
+DRUPAL_PROJECTS_TYPES="features libraries modules profiles themes"
 DRUPAL_PROJECTS_BUILD_ROOT="$DRUPAL_PROJECTS_ROOT/build"
 
 # drupal-enable-caches

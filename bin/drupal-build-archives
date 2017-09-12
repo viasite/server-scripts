@@ -1,11 +1,8 @@
 #!/bin/bash
-# 24.08.2015
-# 27.08.2015 - сборка профилей
-# TODO: move to server-scripts
-# v0.2
 
 . /usr/share/server-scripts/lib/init
 use_config_var "DRUPAL_PROJECTS_ROOT" "/usr/local/drupal"
+use_config_var "DRUPAL_PROJECTS_TYPES" "features libraries modules profiles themes"
 use_config_var "DRUPAL_PROJECTS_BUILD_ROOT" "$DRUPAL_PROJECTS_ROOT/build"
 
 HELP_TEXT="
@@ -13,11 +10,10 @@ Simple replace of drupal update server for drush make.
 
 Сборка tar.gz архивов всех наших модулей.
 
-- Проходит по папкам features,libraries,modules,profiles,themes в /usr/local/drupal
-- Каждую подпапку складывает в /usr/local/drupal/build/тип_модуля/имя_модуля/latest.tar.gz
+- Проходит по папкам DRUPAL_PROJECTS_TYPES в DRUPAL_PROJECTS_ROOT
+- Каждую подпапку складывает в DRUPAL_PROJECTS_BUILD_ROOT/тип_модуля/имя_модуля/latest.tar.gz
 - Определяет версию модуля и создает архив с конкретной версией. Версия берется из .info файла, для libraries - из файла version в корне библиотеки
 - Профили дополнительно пытается собрать и положить в /usr/local/drupal/build/profiles/имя_модуля_packed/latest.tar.gz
-- Запускается по крону раз в час в 55 минут
 "
 
 if [ "$1" = "--help" ]; then
@@ -28,11 +24,6 @@ fi
 
 build_project_archive() {
 	project_path="$1"
-
-	if [ ! -d "$project_path" ]; then
-		return 0
-	fi
-
 	project_name="${project_path##*/}"
 	project_type="$(basename $(dirname "$project_path"))"
 	project_version=$(get_project_version "$project_path")
@@ -83,22 +74,23 @@ build_profile() {
 	cp -r "$project_path" "$project_build_dir"
 	cd "$project_build_dir"
 	if [ -f "$project_makefile" ]; then
-		drush7 make "$project_makefile" --no-core --contrib-destination=. "$project_build_dir"
+		drush make "$project_makefile" --no-core --contrib-destination=. "$project_build_dir"
 		build_project_archive "$project_build_dir"
 	fi
 	rm -rf "$project_build_dir"
 }
 
 main() {
-	for project_path in $(find $DRUPAL_PROJECTS_ROOT/{features,libraries,modules,profiles,themes} -mindepth 1 -maxdepth 1 -type d); do
-		build_project_archive "$project_path"
+	for type in $DRUPAL_PROJECTS_TYPES; do
+		type_path="$DRUPAL_PROJECTS_ROOT/$type"
+		if [ ! -d "$type_path" ]; then
+			break
+		fi
+		for project_path in $(find $type_path -mindepth 1 -maxdepth 1 -type d 2>/dev/null); do
+			build_project_archive "$project_path"
+		done
 	done
-
-	#if [ -d "$DRUPAL_PROJECTS_ROOT/profiles" ]; then
-	#	for profile_path in $(find "$DRUPAL_PROJECTS_ROOT/profiles" -mindepth 1 -maxdepth 1 -type d); do
-	#		build_profile "$profile_path"
-	#	done
-	#fi
 }
 
 main "$@"
+
