@@ -12,30 +12,13 @@ trap 'rm -f "$nginx_sites"' EXIT
 
 NO_EMAIL=${NO_EMAIL:-""}
 
-get_engine() {
-	root_path="$1"
-	if [ -f "$root_path/$SITE_EXCLUDED_FILE" ]; then
-		echo "excluded"
-	elif [ -f "$root_path/configuration.php" ]; then
-		echo "joomla"
-	elif [ -f "$root_path/wp-login.php" ]; then
-		echo "wordpress"
-	elif [ -d "$root_path/sites/all" ]; then
-		echo "drupal"
-	elif [ ! -f "$root_path/index.php" ]; then
-		echo "none"
-	else
-		echo "unknown"
-	fi
-}
-
 get_email() {
 	if [ -n "$NO_EMAIL" ]; then
 		return 0
 	fi
 
 	root_path="$1"
-	engine=$(get_engine "$root_path")
+	engine=$(get-engine "$root_path")
 
 	if [ -f "$root_path/$SITE_INFO_FILE" ]; then
 		if [ $(grep -c "email.*=" "$root_path/$SITE_INFO_FILE") = 1 ]; then
@@ -63,7 +46,7 @@ main() {
 	 > $nginx_sites
 
 	for root_path in $(cat "$nginx_sites"); do
-		engine=$(get_engine "$root_path")
+		engine=$(get-engine "$root_path")
 		domain=$(get_domain "$root_path")
 		email=$(get_email "$root_path")
 		#if [ "$engine" = "none" ]; then continue; fi

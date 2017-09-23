@@ -1,0 +1,30 @@
+#!/bin/bash
+
+set -e
+
+. /usr/share/server-scripts/lib/init
+
+get-engine() {
+	root_path="${1:-$PWD}"
+	if [ -f "$root_path/$SITE_EXCLUDED_FILE" ]; then
+		echo "excluded"
+	elif [ -f "$root_path/configuration.php" ]; then
+		echo "joomla"
+	elif [ -f "$root_path/wp-login.php" ]; then
+		echo "wordpress"
+	elif [ -f "$root_path/sites/default/settings.php" ]; then
+		echo "drupal"
+	elif [ -d "$root_path/bitrix" ]; then
+		echo "bitrix"
+	elif [ -d "$root_path/protected/modules/itexcms" ]; then
+		echo "itexcms"
+	elif [ -d "$root_path/Yii" ]; then
+		echo "yii"
+	elif [ ! -f "$root_path/index.php" ]; then
+		echo "none"
+	else
+		echo "unknown"
+	fi
+}
+
+get-engine "$@"
