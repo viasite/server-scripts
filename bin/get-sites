@@ -53,6 +53,7 @@ main() {
 		if [ "$engine" = "excluded" ]; then continue; fi
 		if [ "$root_path" = "/usr/share/nginx/html" ]; then continue; fi
 		if [ "$root_path" = "/var/www/html" ]; then continue; fi
+		if [ "$root_path" = "/var/www/example.com" ]; then continue; fi
 		echo -e "$root_path\t$hostname\t$engine\t$domain\t$email"
 	done
 }
