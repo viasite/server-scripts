@@ -41,13 +41,18 @@ get_email() {
 
 main() {
 	grep -R "root " /etc/nginx/sites-enabled \
+	 | grep -v '^#' \
 	 | cut -d':' -f2 | grep -o "\(\/.*\?\)" | sed 's/[;"]//g'\
 	 | sort | uniq \
 	 > $nginx_sites
 
 	for root_path in $(cat "$nginx_sites"); do
 		hostname=$(hostname -f)
-		user=$(stat -c '%U' "$root_path")
+		if [ ! -d "$root_path" ]; then
+			user=""
+		else
+			user=$(stat -c '%U' "$root_path")
+		fi
 		engine=$(get-engine "$root_path")
 		domain=$(get_domain "$root_path")
 		email=$(get_email "$root_path")
