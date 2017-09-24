@@ -41,7 +41,7 @@ get_email() {
 
 main() {
 	grep -R "root " /etc/nginx/sites-enabled \
-	 | cut -d':' -f2 | grep -o "\(\/.*\?\)" | sed 's/;//g' \
+	 | cut -d':' -f2 | grep -o "\(\/.*\?\)" | sed 's/[;"]//g'\
 	 | sort | uniq \
 	 > $nginx_sites
 
