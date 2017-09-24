@@ -50,8 +50,9 @@ main() {
 		engine=$(get-engine "$root_path")
 		domain=$(get_domain "$root_path")
 		email=$(get_email "$root_path")
-		#if [ "$engine" = "none" ]; then continue; fi
 		if [ "$engine" = "excluded" ]; then continue; fi
+		if [ "$root_path" = "/usr/share/nginx/html" ]; then continue; fi
+		if [ "$root_path" = "/var/www/html" ]; then continue; fi
 		echo -e "$root_path\t$hostname\t$engine\t$domain\t$email"
 	done
 }
