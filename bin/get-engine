@@ -20,6 +20,10 @@ get-engine() {
 		echo "itexcms"
 	elif [ -d "$root_path/Yii" ]; then
 		echo "yii"
+	elif [ ! -d "$root_path/lib/Zend" ]; then
+		echo "zend"
+	elif [ ! -d "$root_path/vendor/prestashop" ]; then
+		echo "prestashop"
 	elif [ ! -f "$root_path/index.php" ]; then
 		echo "none"
 	else
