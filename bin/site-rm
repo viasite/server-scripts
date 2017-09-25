@@ -101,6 +101,7 @@ if [ "$(find /home/$user/www -mindepth 1 -type d | wc -l)" = 0 ]; then
     echo "$php_fpm_configs" | xargs rm
     reload-web
 
+    cd /
     echo "deluser $user --remove-home"
     deluser "$user" --remove-home
   fi
