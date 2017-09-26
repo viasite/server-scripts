@@ -1,0 +1,27 @@
+#!/bin/bash
+
+set -e
+. /usr/share/server-scripts/lib/init
+use_config_var "SITE_INFO_FILE" ".info"
+
+root_path="${1:-$PWD}"
+cd "$root_path"
+engine="$(get-engine)"
+
+if [ -f "$root_path/$SITE_INFO_FILE" ]; then
+    if [ $(grep -c "email.*=" "$root_path/$SITE_INFO_FILE") = 1 ]; then
+        grep "email.*=" "$root_path/$SITE_INFO_FILE" | cut -d'=' -f2 | tr -d "\"' ;"
+    fi
+fi
+
+if [ "$engine" = "drupal" ]; then
+    cd "$root_path"
+    if [ "$(drs vget maintenance_mode)" = 1 ]; then
+        echo "" #maintenance_mode
+    else
+        drs vget site_mail
+    fi
+elif [ "$engine" = "joomla" ]; then
+    config_file="$root_path/configuration.php"
+    grep "mailfrom" "$config_file" | cut -d'=' -f2 | tr -d "\"' ;"
+fi

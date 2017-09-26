@@ -12,32 +12,6 @@ trap 'rm -f "$nginx_sites"' EXIT
 
 NO_EMAIL=${NO_EMAIL:-""}
 
-get_email() {
-	if [ -n "$NO_EMAIL" ]; then
-		return 0
-	fi
-
-	root_path="$1"
-	engine=$(get-engine "$root_path")
-
-	if [ -f "$root_path/$SITE_INFO_FILE" ]; then
-		if [ $(grep -c "email.*=" "$root_path/$SITE_INFO_FILE") = 1 ]; then
-			grep "email.*=" "$root_path/$SITE_INFO_FILE" | cut -d'=' -f2 | tr -d "\"' ;"
-		fi
-	fi
-
-	if [ "$engine" = "drupal" ]; then
-		cd "$root_path"
-		if [ "$(drs vget maintenance_mode)" = 1 ]; then
-			echo "" #maintenance_mode
-		else
-			drs vget site_mail
-		fi
-	elif [ "$engine" = "joomla" ]; then
-		config_file="$root_path/configuration.php"
-		grep "mailfrom" "$config_file" | cut -d'=' -f2 | tr -d "\"' ;"
-	fi
-}
 
 main() {
 	grep -R "root " /etc/nginx/sites-enabled \
@@ -55,7 +29,7 @@ main() {
 		fi
 		engine=$(get-engine "$root_path")
 		domain=$(get_domain "$root_path")
-		email=$(get_email "$root_path")
+		email=$(get-email "$root_path")
 		if [ "$engine" = "excluded" ]; then continue; fi
 		if [ "$root_path" = "/usr/share/nginx/html" ]; then continue; fi
 		if [ "$root_path" = "/var/www/html" ]; then continue; fi
