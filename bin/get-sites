@@ -14,6 +14,7 @@ import socket
 import time
 import json
 import re
+import urllib
 
 
 def signal_handler(signal, frame):
@@ -56,6 +57,9 @@ def main():
     parser.add_option('--no-email',
                       action='store_true', dest='no_email',
                       help='')
+    parser.add_option('--no-ip',
+                      action='store_true', dest='no_ip',
+                      help='Don\'t check domain IP')
     parser.add_option('--only-root-path',
                       action='store_true', dest='only_root_path',
                       help='Just output list of root_paths')
@@ -107,7 +111,8 @@ class Sites:
     def site_info_attach(self):
         if self.args.site_info:
             for k, site in enumerate(self.sites):
-                json_path = self.args.results_dir + '/' + site['domain'] + '.json'
+                json_path = self.args.results_dir + \
+                    '/' + site['domain'] + '.json'
                 if os.path.exists(json_path):
                     with open(json_path) as f:
                         self.sites[k]['site_info'] = json.load(f)
@@ -132,18 +137,18 @@ class Sites:
                                lock_file_age=self.args.lock_file_age, force=self.args.force)
         runner.run()
 
-        for command in runner.commands:
-            print('%s:\n%s\n\n\n' % (command.file_name, command.stdout))
-
     def load(self):
         sites = []
         nginx_sites_dir = '/etc/nginx/sites-enabled'
         site_files = os.listdir(nginx_sites_dir)
 
+        data = json.loads(urllib.urlopen('http://ip.jsontest.com/').read())
+        server_ip = data['ip']
+
         for site_file in site_files:
             with open(nginx_sites_dir + '/' + site_file) as f:
                 content = f.read()
-                for m in re.finditer(r'\s*root (.*?);', content):
+                for m in re.finditer(r'\s*root "?(.*?)"?;', content):
                     # TODO: commented root detect
                     if not m or not m.group(1):
                         continue
@@ -153,13 +158,22 @@ class Sites:
                     if os.path.exists(root_path + '/' + self.args.excluded_file):
                         continue
 
+                    if not self.args.no_ip:
+                        domain = command_output('get_domain ' + root_path)
+                        domain_idn = domain.strip().decode('utf-8').encode("idna")
+                        try:
+                            domain_ip = socket.gethostbyname(domain_idn)
+                        except socket.gaierror:
+                            domain_ip = 'unknown'
+
                     site = {
                         'root_path': root_path,
                         'hostname': socket.getfqdn(),
                         'user': pwd.getpwuid(os.stat(root_path).st_uid).pw_name,
-                        'domain': command_output('get_domain ' + root_path),
+                        'domain': domain,
                         'email': '' if self.args.no_email else command_output('get-email ' + root_path),
-                        'engine': command_output('get-engine ' + root_path)
+                        'engine': command_output('get-engine ' + root_path),
+                        'domain_on_server': '' if self.args.no_ip else ('1' if domain_ip == server_ip else '0')
                     }
                     sites.append(site)
         self.sites = sites
@@ -171,7 +185,7 @@ class Sites:
                     print(site['root_path'])
                 else:
                     values = []
-                    for name in ['root_path', 'hostname', 'user', 'domain', 'engine', 'email']:
+                    for name in ['root_path', 'hostname', 'user', 'domain', 'engine', 'email', 'domain_on_server']:
                         values.append(site[name])
                     print('\t'.join(values))
         elif self.args.output_format == 'json':
