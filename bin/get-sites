@@ -19,8 +19,10 @@ import re
 def signal_handler(signal, frame):
     sys.exit(0)
 
+
 def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
+
 
 def run_command(command):
     proc = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True)
@@ -29,9 +31,11 @@ def run_command(command):
     rc = proc.poll()
     return (rc, out, err)
 
+
 def command_output(command):
     (rc, out, err) = run_command(command)
-    return out
+    return out.rstrip('\n')
+
 
 def main():
     signal.signal(signal.SIGINT, signal_handler)
@@ -39,22 +43,44 @@ def main():
     parser = optparse.OptionParser(usage='get-sites')
 
     parser.add_option('--format',
-                        action='store', dest='output_format', default='console',
-                        help='Output format (console, json')
+                      action='store', dest='output_format', default='console',
+                      help='Output format (console, json')
     parser.add_option('--root-path-excluded',
-                        action='append', dest='root_paths_excluded',
-                        default=['/usr/share/nginx/html',
-                                 '/var/www/html', '/var/www/example.com'],
-                        help='')
+                      action='append', dest='root_paths_excluded',
+                      default=['/usr/share/nginx/html',
+                               '/var/www/html', '/var/www/example.com'],
+                      help='')
     parser.add_option('--excluded-file',
-                        action='store', dest='excluded_file', default='.excluded',
-                        help='')
+                      action='store', dest='excluded_file', default='.excluded',
+                      help='')
     parser.add_option('--no-email',
-                        action='store_true', dest='no_email',
-                        help='')
+                      action='store_true', dest='no_email',
+                      help='')
     parser.add_option('--only-root-path',
-                        action='store_true', dest='only_root_path',
-                        help='Just output list of root_paths')
+                      action='store_true', dest='only_root_path',
+                      help='Just output list of root_paths')
+
+    parser.add_option('--site-info',
+                      action='store_true', dest='site_info',
+                      help='Attach site-info from logs (if exists)')
+    parser.add_option('--site-info-generate',
+                      action='store_true', dest='site_info_generate',
+                      help='Attach site-info from logs, generate if not exists')
+    parser.add_option('--delay',
+                      type=int, action='store', dest='delay', default=0,
+                      help='Delay between site-info calls, seconds')
+    parser.add_option('--lock-file-path',
+                      action='store', dest='lock_file_path', default='/tmp/sites-info.lock',
+                      help='Path to lockfile')
+    parser.add_option('--lock-file-max-age',
+                      type=int, action='store', dest='lock_file_age', default=86400,
+                      help='Max age of lockfile (since last modification), seconds')
+    parser.add_option('--results-dir',
+                      action='store', dest='results_dir', default='/var/log/site-info',
+                      help='Path to directory with site-info results')
+    parser.add_option('--force',
+                      action='store_true', dest='force', default=False,
+                      help='Ignore lockfile')
     #args = parser.parse_args()
     (args, options) = parser.parse_args()
     if 'NO_EMAIL' in os.environ:
@@ -64,17 +90,50 @@ def main():
     sites = Sites(args)
     sites.load()
 
-    #sites.site_info_generate()
+    if args.site_info_generate:
+        sites.site_info_generate()
+
+    if args.site_info:
+        sites.site_info_attach()
 
     sites.output()
-
-
 
 
 class Sites:
     def __init__(self, args):
         self.args = args
         self.sites = []
+
+    def site_info_attach(self):
+        if self.args.site_info:
+            for k, site in enumerate(self.sites):
+                json_path = self.args.results_dir + '/' + site['domain'] + '.json'
+                if os.path.exists(json_path):
+                    with open(json_path) as f:
+                        self.sites[k]['site_info'] = json.load(f)
+
+    def site_info_generate(self):
+        commands = []
+        if not os.path.exists(self.args.results_dir):
+            os.mkdir(self.args.results_dir)
+            os.chmod(self.args.results_dir, 0700)
+
+        for site in self.sites:
+            commands.append({
+                'command': 'site-info',
+                #'command': 'ls',
+                'args': [site['root_path'], '--format', 'json'],
+                'stdout': '',
+                'stderr': '',
+                'out_path': '%s/%s.json' % (self.args.results_dir, site['domain'])
+            });
+
+        runner = CommandRunner(commands, delay=self.args.delay, lock_file_path=self.args.lock_file_path,
+                               lock_file_age=self.args.lock_file_age, force=self.args.force)
+        runner.run()
+
+        for command in runner.commands:
+            print('%s:\n%s\n\n\n' % (command.file_name, command.stdout))
 
     def load(self):
         sites = []
@@ -113,10 +172,66 @@ class Sites:
                 else:
                     values = []
                     for name in ['root_path', 'hostname', 'user', 'domain', 'engine', 'email']:
-                        values.append(site[name].strip())
+                        values.append(site[name])
                     print('\t'.join(values))
         elif self.args.output_format == 'json':
             print(json.dumps(self.sites))
+
+
+class CommandRunner:
+    def __init__(self, commands, delay=0, lock_file_path=None, lock_file_age=None, force=False):
+        self.commands = commands
+        self.delay = delay
+        self.lock_file = None
+        self.lock_file_path = lock_file_path
+        self.lock_file_age = lock_file_age
+        self.force = force
+
+    def lock_check(self):
+        if not os.path.exists(self.lock_file_path):
+            return True
+        mtime = os.path.getmtime(self.lock_file_path)
+        if time.time() - mtime < self.lock_file_age:
+            return False
+
+    def lock_write(self, str):
+        log_str = '%s\t%s\n' % (time.strftime('%Y-%m-%d %H:%M:%S'), str)
+
+        with open(self.lock_file_path, 'a') as f:
+            f.write(log_str)
+        eprint(log_str)
+
+    def run(self):
+        if not self.lock_check():
+            eprint('Lockfile %s exists and was modified at last %d seconds' %
+                   (self.lock_file_path, self.lock_file_age))
+            if self.force:
+                eprint('But --force flag defined, ignoring lockfile')
+            else:
+                sys.exit(1)
+
+        self.lock_write('sites-info started, total commands: %d' %
+                        len(self.commands))
+        os.chmod(self.lock_file_path, 0600)
+
+        for k, command in enumerate(self.commands):
+            cmd = '%s %s' % (command['command'], ' '.join(command['args']))
+            self.lock_write('run command (%d/%d): %s' %
+                            (k + 1, len(self.commands), cmd))
+
+            (out, err) = self.run_command(cmd)
+            self.commands[k]['stdout'] = out
+            self.commands[k]['stderr'] = err
+            if command['out_path']:
+                with open(command['out_path'], 'w') as f:
+                    f.write(out)
+
+            time.sleep(self.delay)
+
+    def run_command(self, command):
+        proc = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True)
+        (out, err) = proc.communicate()
+        return (out, err)
 
 
 if __name__ == '__main__':
