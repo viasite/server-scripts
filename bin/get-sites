@@ -1,41 +1,123 @@
-#!/bin/bash
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
-set -e
+from __future__ import print_function
+import optparse
+import datetime
+import os
+import sys
+import signal
+import subprocess
+from pprint import pprint
+import pwd
+import socket
+import time
+import json
+import re
 
-. /usr/share/server-scripts/lib/init
-use_config_var "DRUPAL_ROOT_LEVEL"
-use_config_var "SITE_EXCLUDED_FILE" ".excluded"
-use_config_var "SITE_INFO_FILE" ".info"
 
-nginx_sites=$(mktemp -t nginx-sites-XXXX)
-trap 'rm -f "$nginx_sites"' EXIT
+def signal_handler(signal, frame):
+    sys.exit(0)
 
-NO_EMAIL=${NO_EMAIL:-""}
+def eprint(*args, **kwargs):
+    print(*args, file=sys.stderr, **kwargs)
+
+def run_command(command):
+    proc = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True)
+    (out, err) = proc.communicate()
+    proc.wait()
+    rc = proc.poll()
+    return (rc, out, err)
+
+def command_output(command):
+    (rc, out, err) = run_command(command)
+    return out
+
+def main():
+    signal.signal(signal.SIGINT, signal_handler)
+    #parser = argparse.ArgumentParser(description='get-sites')
+    parser = optparse.OptionParser(usage='get-sites')
+
+    parser.add_option('--format',
+                        action='store', dest='output_format', default='console',
+                        help='Output format (console, json')
+    parser.add_option('--root-path-excluded',
+                        action='append', dest='root_paths_excluded',
+                        default=['/usr/share/nginx/html',
+                                 '/var/www/html', '/var/www/example.com'],
+                        help='')
+    parser.add_option('--excluded-file',
+                        action='store', dest='excluded_file', default='.excluded',
+                        help='')
+    parser.add_option('--no-email',
+                        action='store_true', dest='no_email',
+                        help='')
+    parser.add_option('--only-root-path',
+                        action='store_true', dest='only_root_path',
+                        help='Just output list of root_paths')
+    #args = parser.parse_args()
+    (args, options) = parser.parse_args()
+    if 'NO_EMAIL' in os.environ:
+        args.no_email = True
+    eprint('get-sites...')
+
+    sites = Sites(args)
+    sites.load()
+
+    #sites.site_info_generate()
+
+    sites.output()
 
 
-main() {
-	grep -R "root " /etc/nginx/sites-enabled \
-	 | grep -v '^#' \
-	 | cut -d':' -f2 | grep -o "\(\/.*\?\)" | sed 's/[;"]//g'\
-	 | sort | uniq \
-	 > $nginx_sites
 
-	for root_path in $(cat "$nginx_sites"); do
-		hostname=$(hostname -f)
-		if [ ! -d "$root_path" ]; then
-			user=""
-		else
-			user=$(stat -c '%U' "$root_path")
-		fi
-		engine=$(get-engine "$root_path")
-		domain=$(get_domain "$root_path")
-		email=$(get-email "$root_path")
-		if [ "$engine" = "excluded" ]; then continue; fi
-		if [ "$root_path" = "/usr/share/nginx/html" ]; then continue; fi
-		if [ "$root_path" = "/var/www/html" ]; then continue; fi
- 		if [ "$root_path" = "/var/www/example.com" ]; then continue; fi
-		echo -e "$root_path\t$hostname\t$user\t$engine\t$domain\t$email"
-	done
-}
 
-main "$@"
+class Sites:
+    def __init__(self, args):
+        self.args = args
+        self.sites = []
+
+    def load(self):
+        sites = []
+        nginx_sites_dir = '/etc/nginx/sites-enabled'
+        site_files = os.listdir(nginx_sites_dir)
+
+        for site_file in site_files:
+            with open(nginx_sites_dir + '/' + site_file) as f:
+                content = f.read()
+                for m in re.finditer(r'\s*root (.*?);', content):
+                    # TODO: commented root detect
+                    if not m or not m.group(1):
+                        continue
+                    root_path = m.group(1)
+                    if root_path in self.args.root_paths_excluded:
+                        continue
+                    if os.path.exists(root_path + '/' + self.args.excluded_file):
+                        continue
+
+                    site = {
+                        'root_path': root_path,
+                        'hostname': socket.getfqdn(),
+                        'user': pwd.getpwuid(os.stat(root_path).st_uid).pw_name,
+                        'domain': command_output('get_domain ' + root_path),
+                        'email': '' if self.args.no_email else command_output('get-email ' + root_path),
+                        'engine': command_output('get-engine ' + root_path)
+                    }
+                    sites.append(site)
+        self.sites = sites
+
+    def output(self):
+        if self.args.output_format == 'console':
+            for site in self.sites:
+                if self.args.only_root_path:
+                    print(site['root_path'])
+                else:
+                    values = []
+                    for name in ['root_path', 'hostname', 'user', 'domain', 'engine', 'email']:
+                        values.append(site[name].strip())
+                    print('\t'.join(values))
+        elif self.args.output_format == 'json':
+            print(json.dumps(self.sites))
+
+
+if __name__ == '__main__':
+    main()
