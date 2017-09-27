@@ -15,6 +15,7 @@ import urllib
 import yaml
 from influxdb import line_protocol
 
+
 def signal_handler(signal, frame):
     sys.exit(0)
 
@@ -23,20 +24,19 @@ def main():
     signal.signal(signal.SIGINT, signal_handler)
 
     parser = argparse.ArgumentParser(description='site-info')
-    parser.add_argument('root_path', help='Path to site root directory', nargs='?', default=os.getcwd())
-    parser.add_argument('--format', 
-        action='store', dest='output_format', default='console',
-        help='Output format (console, json, line')
-
-    parser.set_defaults(
-        output_format='console',
-        tests_filename='site-info.yml'
-    )
+    parser.add_argument(
+        'root_path', help='Path to site root directory', nargs='?', default=os.getcwd())
+    parser.add_argument('--format',
+                        action='store', dest='output_format', default='console',
+                        help='Output format (console, json, line')
+    parser.add_argument('--group',
+                        action='append', dest='groups', default=['main'],
+                        help='Groups of site-info tests')
 
     args = parser.parse_args()
 
-    # table = DrupalsTable(root_paths=root_paths, suites_limit=suites_limit, tests_limit=tests_limit, 
-    # 	data_xlsx_filename=options.data_xlsx_filename, data_json_filename=options.data_json_filename, 
+    # table = DrupalsTable(root_paths=root_paths, suites_limit=suites_limit, tests_limit=tests_limit,
+    # 	data_xlsx_filename=options.data_xlsx_filename, data_json_filename=options.data_json_filename,
     # 	only_tests=only_tests, only_groups=only_groups, term_output=term_output)
 
     site_info = SiteInfo(args)
@@ -47,8 +47,8 @@ def main():
 
 class SiteInfo():
     def __init__(self, args):
+        self.groups = args.groups
         self.root_path = args.root_path
-        self.tests_filename = args.tests_filename
         self.output_format = args.output_format
         self.tests = []
         self.data = {}
@@ -58,8 +58,9 @@ class SiteInfo():
         self.add_data('engine', self.get_engine())
 
         self.tests_config = self.get_tests()
-        self.tests_config['tests'] = [x for x in self.tests_config['tests'] if not 'engine' in x or x['engine'] == self.data['engine']]
-        for test_config in self.tests_config['tests']:
+        self.tests_config = [x for x in self.tests_config
+                                      if not 'engine' in x or x['engine'] == self.data['engine']]
+        for test_config in self.tests_config:
             self.add_test(test_config)
 
     def get_engine(self):
@@ -82,13 +83,11 @@ class SiteInfo():
         self.tests.append(SiteTest(test_config))
         return self
 
-    def get_tests(self):
+    def get_all_tests(self):
         tests_config = {}
-
         paths = [
-            '/etc/' + self.tests_filename,
-            os.path.expanduser('~') + '/' + self.tests_filename,
-            self.root_path + '.' + self.tests_filename
+            '/etc/site-info.yml',
+            os.path.expanduser('~') + '/site-info.yml'
         ]
 
         for path in paths:
@@ -96,10 +95,34 @@ class SiteInfo():
                 with open(path, 'r') as f:
                     tests_config = yaml.load(f)
 
-        if tests_config == {}:
-            print("No site-info.yml found, exit")
+        if not tests_config:
+            print("No site-info.yml found, or empty, aborting.")
             sys.exit(1)
+
+        for t in tests_config['tests']:
+            # нормализуем конфиг
+            if 'groups' in t:
+                if not isinstance(t['groups'], (list)):
+                    t['groups'] = [t['groups']]
+            else:
+                t['groups'] = []
+
         return tests_config
+
+    def get_tests(self):
+        tests_config = self.get_all_tests()
+        groups = self.groups
+        filtered = []
+
+        if 'all' in groups:
+            return tests_config['tests']
+
+        for t in tests_config['tests']:
+            # фильтруем по пересечениям групп
+            intersect = list(set(groups) & set(t['groups']))
+            if intersect:
+                filtered.append(t)
+        return filtered
 
     def reset(self):
         for test in self.tests:
@@ -108,7 +131,8 @@ class SiteInfo():
         self._results = []
 
     def run(self):
-        self.add_data('domain', os.path.basename(self.root_path).decode('idna'))
+        self.add_data('domain', os.path.basename(
+            self.root_path).decode('idna'))
 
         for t in self.tests:
             t.command = t.command.replace('${DOMAIN}', self.data['domain'])
@@ -119,9 +143,9 @@ class SiteInfo():
                 #delta = self.get_delta(self.get_last_result(t.name), t.result)
                 delta = 0
                 t.out_console(
-                    color_output=True, 
+                    color_output=True,
                     delta=delta
-                    )
+                )
 
         data = self.get_data()
 
@@ -147,9 +171,9 @@ class SiteInfo():
                 tags[t['name']] = t['result']
 
             #tags_raw = ['%s=%s' % (k,v) for k,v in tags.iteritems()]
-            fields = {'zxc':3, 'qwe':4}
+            fields = {'zxc': 3, 'qwe': 4}
             #line = '%s,%s %s %s' % (measurement, tags_raw.join(','), fields_raw, timestamp)
-            #print line
+            # print line
 
             data = {'points': [{
                 'measurement': 'site_info',
@@ -160,7 +184,6 @@ class SiteInfo():
 
             print line_protocol.make_lines(data)
 
-
     def add_data(self, name, value):
         self.data[name] = value
 
@@ -169,23 +192,12 @@ class SiteInfo():
     Формирование колонок, которые не тесты, а сводные
     Используется для формирования всего остального
     """
+
     def get_data(self, group=None):
         if self._results and not group:
             return self._results
 
         row = []
-
-        row.append({
-            'name': 'domain',
-            'result': self.data['domain'],
-            'valid': None
-        })
-
-        row.append({
-            'name': 'engine',
-            'result': self.data['engine'],
-            'valid': None
-        })
 
         time = 0
         result = 0
@@ -196,8 +208,8 @@ class SiteInfo():
                 continue
 
             col = {
-                'name':test.name,
-                'result':test.result,
+                'name': test.name,
+                'result': test.result,
                 #'last_result': self.get_last_result(test.name),
                 'valid': test.valid_str(),
                 'time': test.time,
@@ -206,38 +218,38 @@ class SiteInfo():
             }
 
             time += test.time
-            if test.valid()=='Warn':
+            if test.valid() == 'Warn':
                 result += 1
-            elif test.valid()==True:
+            elif test.valid() == True:
                 result += 2
             max_result += test.max_result()
 
             row.append(col)
 
         row.append({
-            'name':'time',
-            'result':time,
+            'name': 'time',
+            'result': time,
             #'last_result':self.get_last_result('time'),
             'valid': None
         })
 
         # общие результаты по всем тестам сайта
         row.append({
-            'name':'result',
-            'result':result,
+            'name': 'result',
+            'result': result,
             #'last_result':self.get_last_result('result'),
             'valid': None
         })
 
         row.append({
-            'name':'max_result',
-            'result':max_result,
+            'name': 'max_result',
+            'result': max_result,
             'valid': None
         })
 
         row.append({
-            'name':'result_percent',
-            'result':int(float(result)/max_result*100) if max_result>0 else 0,
+            'name': 'result_percent',
+            'result': int(float(result) / max_result * 100) if max_result > 0 else 0,
             #'last_result':self.get_last_result('result_percent'),
             'valid': None
         })
@@ -249,6 +261,8 @@ class SiteInfo():
 """
 SiteTest - один тест (одна колонка)
 """
+
+
 class SiteTest():
 
     def __init__(self, *initial_data):
@@ -268,23 +282,24 @@ class SiteTest():
         if not hasattr(self, 'groups'):
             self.groups = []
 
-
     """
     Запуск команды теста, получение результата, вывод в консоль
     """
+
     def run(self):
         started = time.time()
         if self.command is not None:
-            proc = subprocess.Popen(self.command, stdout=subprocess.PIPE, shell=True)
+            proc = subprocess.Popen(
+                self.command, stdout=subprocess.PIPE, shell=True)
             (out, err) = proc.communicate()
             self.result = out.strip()
             self.time = round(time.time() - started, 1)
             return self.result
 
-
     """
     Цветной вывод результата теста в консоль
     """
+
     def out_console(self, color_output=True, delta=None):
         valid = self.valid()
         nc = '\033[0m'
@@ -303,29 +318,29 @@ class SiteTest():
         color = colors[self.valid_str()]
 
         # TODO: color_output отключает вывод коммента, из-за крона
-        comment = (' (%s)' % self.comment if self.comment and color_output else '')
+        comment = (' (%s)' %
+                   self.comment if self.comment and color_output else '')
         delta_text = ''
         if delta:
-            delta_color = colors['pass'] if delta>0 else colors['warn']
-            delta_text = ' (%s%s%s%s)' % (delta_color, ('+' if delta>0 else ''), delta, nc)
+            delta_color = colors['pass'] if delta > 0 else colors['warn']
+            delta_text = ' (%s%s%s%s)' % (
+                delta_color, ('+' if delta > 0 else ''), delta, nc)
 
         print '%s: %s%s%s%s%s' % (self.name, color, self.result, nc, delta_text, comment)
-
 
     def validable(self):
         if self.validate is None or not self.validate:
             return False
         return True
 
-
     def max_result(self):
         return 2 if self.validable() else 0
-
 
     """
     Проверка результата.
     Возвращает: None|True|False|Warn|результат
     """
+
     def valid(self):
         rules = self.validate
         result = self.result
@@ -333,7 +348,7 @@ class SiteTest():
         if not self.validable() or result is None:
             return None
 
-        #elif rules=='result':
+        # elif rules=='result':
         #	return result
 
         valid = self._check(result, rules)
@@ -346,7 +361,6 @@ class SiteTest():
 
         return True
 
-
     def valid_str(self):
         return {
             None: None,
@@ -355,12 +369,12 @@ class SiteTest():
             False: 'fail'
         }[self.valid()]
 
-
     """
     Проверка результата по правилам
     Если соответствует, вернет True
     Если правила пустые, значит соответствует (TODO: с этим будут проблемы)
     """
+
     def _check(self, result, rules):
         if isinstance(rules, dict):
             if isinstance(result, basestring) and result.isdigit():
@@ -373,9 +387,10 @@ class SiteTest():
                 return False
 
         else:
-            return result==rules
+            return result == rules
 
         return True
+
 
 if __name__ == '__main__':
     main()

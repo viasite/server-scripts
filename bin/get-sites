@@ -61,22 +61,11 @@ def main():
     parser.add_option('--excluded-file',
                       action='store', dest='excluded_file', default='.excluded',
                       help='')
-    parser.add_option('--no-email',
-                      action='store_true', dest='no_email',
-                      help='')
-    parser.add_option('--no-ip',
-                      action='store_true', dest='no_ip',
-                      help='Don\'t check domain IP')
-    parser.add_option('--only-root-path',
-                      action='store_true', dest='only_root_path',
-                      help='Just output list of root_paths')
 
-    parser.add_option('--site-info',
-                      action='store_true', dest='site_info',
-                      help='Attach site-info from logs (if exists)')
-    parser.add_option('--site-info-generate',
-                      action='store_true', dest='site_info_generate',
-                      help='Attach site-info from logs, generate if not exists')
+    # site-info args
+    parser.add_option('--cached',
+                      action='store_true', dest='site_info_cached',
+                      help='Only attach site-info, don\'t generate')
     parser.add_option('--delay',
                       type=int, action='store', dest='delay', default=0,
                       help='Delay between site-info calls, seconds')
@@ -92,7 +81,11 @@ def main():
     parser.add_option('--force',
                       action='store_true', dest='force', default=False,
                       help='Ignore lockfile')
+    parser.add_option('--group',
+                      action='append', dest='groups', default=['main'],
+                      help='Groups of site-info tests')
 
+    # export args
     parser.add_option('--sites-json',
                       action='store', dest='sites_json',
                       help='Get sites results from json')
@@ -104,9 +97,6 @@ def main():
     #args = parser.parse_args()
     (args, options) = parser.parse_args()
 
-    if 'NO_EMAIL' in os.environ:
-        args.no_email = True
-
     sites = Sites(args)
 
     if args.sites_json:
@@ -116,11 +106,12 @@ def main():
         eprint('get-sites...')
         sites.load()
 
-        if args.site_info_generate:
-            sites.site_info_generate()
+        #if args.site_info_generate:
+        #sites.site_info_generate()
 
-        if args.site_info:
-            sites.site_info_attach()
+        if not args.site_info_cached:
+            sites.site_info_generate()
+        sites.site_info_attach()
 
     sites.output()
 
@@ -130,14 +121,16 @@ class Sites:
         self.args = args
         self.sites = []
 
+    def get_hash(self, site):
+        return site['root_path'].replace('/', '_') + '__' + '-'.join(self.args.groups)
+
     def site_info_attach(self):
-        if self.args.site_info:
-            for k, site in enumerate(self.sites):
-                json_path = self.args.results_dir + \
-                    '/' + site['domain'] + '.json'
-                if os.path.exists(json_path):
-                    with open(json_path) as f:
-                        self.sites[k]['site_info'] = json.load(f)
+        for k, site in enumerate(self.sites):
+            json_path = self.args.results_dir + \
+                '/' + self.get_hash(site) + '.json'
+            if os.path.exists(json_path):
+                with open(json_path) as f:
+                    self.sites[k]['site_info'] = json.load(f)
 
     def site_info_generate(self):
         commands = []
@@ -146,13 +139,16 @@ class Sites:
             os.chmod(self.args.results_dir, 0700)
 
         for site in self.sites:
+            site_info_args = [site['root_path'], '--format', 'json']
+            for group in self.args.groups:
+                site_info_args.extend(['--group', group])
+
             commands.append({
                 'command': 'site-info',
-                #'command': 'ls',
-                'args': [site['root_path'], '--format', 'json'],
+                'args': site_info_args,
                 'stdout': '',
                 'stderr': '',
-                'out_path': '%s/%s.json' % (self.args.results_dir, site['domain'])
+                'out_path': '%s/%s.json' % (self.args.results_dir, self.get_hash(site))
             });
 
         runner = CommandRunner(commands, delay=self.args.delay, lock_file_path=self.args.lock_file_path,
@@ -163,9 +159,6 @@ class Sites:
         sites = []
         nginx_sites_dir = '/etc/nginx/sites-enabled'
         site_files = os.listdir(nginx_sites_dir)
-
-        data = json.loads(urllib.urlopen('http://ip.jsontest.com/').read())
-        server_ip = data['ip']
 
         for site_file in site_files:
             with open(nginx_sites_dir + '/' + site_file) as f:
@@ -180,16 +173,8 @@ class Sites:
                     if os.path.exists(root_path + '/' + self.args.excluded_file):
                         continue
 
-                    domain = command_output('get_domain ' + root_path)
-
                     site = {
                         'root_path': root_path,
-                        'hostname': socket.getfqdn(),
-                        'user': pwd.getpwuid(os.stat(root_path).st_uid).pw_name,
-                        'domain': domain,
-                        'email': '' if self.args.no_email else command_output('get-email ' + root_path),
-                        'engine': command_output('get-engine ' + root_path),
-                        'domain_on_server': '' if self.args.no_ip else command_output('domain-on-server ' + domain)
                     }
                     sites.append(site)
         self.sites = sites
@@ -197,17 +182,15 @@ class Sites:
     def output(self):
         if self.args.output_format == 'console':
             for site in self.sites:
-                if self.args.only_root_path:
-                    print(site['root_path'])
-                else:
-                    values = []
-                    for name in ['root_path', 'hostname', 'user', 'domain', 'engine', 'email', 'domain_on_server']:
-                        values.append(site[name])
-                    print('\t'.join(values))
+                values = []
+                for t in site['site_info']:
+                    value = t['result'].encode('utf-8') if isinstance(t['result'], basestring) else str(t['result'])
+                    values.append(value)
+                print('\t'.join(values))
         elif self.args.output_format == 'json':
             print(json.dumps(self.sites))
         elif self.args.output_format == 'xlsx':
-            table = XLSTable(self.sites)
+            table = XLSTable(self.args, self.sites)
             table.to_excel(self.args.xlsx_path)
 
 
@@ -270,12 +253,12 @@ class CommandRunner:
 Собирает таблицу из результатов тестов
 """
 class XLSTable():
-    def __init__(self, sites):
+    def __init__(self, args, sites):
+        self.groups = args.groups
         self.sites = sites
 
-    def get_tests(self):
+    def get_all_tests(self):
         tests_config = {}
-
         paths = [
             '/etc/site-info.yml',
             os.path.expanduser('~') + '/site-info.yml'
@@ -290,7 +273,31 @@ class XLSTable():
             print("No site-info.yml found, or empty, aborting.")
             sys.exit(1)
 
+        for t in tests_config['tests']:
+            # нормализуем конфиг
+            if 'groups' in t:
+                if not isinstance(t['groups'], (list)):
+                    t['groups'] = [t['groups']]
+            else:
+                t['groups'] = []
+
         return tests_config
+
+    def get_tests(self):
+        tests_config = self.get_all_tests()
+        groups = self.groups
+        filtered = []
+
+        if 'all' in groups:
+            return tests_config['tests']
+
+        for t in tests_config['tests']:
+            # фильтруем по пересечениям групп
+            intersect = list(set(groups) & set(t['groups']))
+            if intersect:
+                filtered.append(t)
+        return filtered
+
 
     """
     Каждая ячейка должна иметь поля name, result
@@ -400,7 +407,7 @@ class XLSTable():
 
         # заполнение шапки
         field_names = []
-        for col_idx, t in enumerate(tests_config['tests']):
+        for col_idx, t in enumerate(tests_config):
             col_name = get_column_letter(col_idx + 1)
             field_names.append(t['name'])
             cell = sheet.cell('%s%s' % (col_name, 1))

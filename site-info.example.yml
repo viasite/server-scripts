@@ -4,11 +4,43 @@ tests:
   comment: Путь к сайту
   command: pwd
   type: string
+  groups: main
 
 - name: server
   comment: hostname сервера
   command: hostname -f
   type: string
+  groups: main
+
+- name: user
+  comment: пользователь сайта
+  command: stat -c '%U' "$PWD"
+  type: string
+  groups: main
+
+- name: domain
+  comment: главный домен сайта
+  command: get_domain
+  type: string
+  groups: main
+
+- name: engine
+  comment: движок сайта
+  command: get-engine
+  type: string
+  groups: main
+
+- name: domain_on_server
+  comment: домен действительно делегирован на этот сервер
+  command: domain-on-server ${DOMAIN}
+  type: string
+  groups: main
+
+- name: email
+  comment: главный домен сайта
+  command: get-email
+  type: string
+  groups: info
 
 - name: maintenance_mode
   comment: Режим обслуживания
