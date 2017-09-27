@@ -15,6 +15,13 @@ import time
 import json
 import re
 import urllib
+import copy
+import yaml
+
+from openpyxl.workbook import Workbook
+from openpyxl.utils import get_column_letter
+from openpyxl.styles import NamedStyle, PatternFill, Font
+from openpyxl.comments import Comment
 
 
 def signal_handler(signal, frame):
@@ -45,7 +52,7 @@ def main():
 
     parser.add_option('--format',
                       action='store', dest='output_format', default='console',
-                      help='Output format (console, json')
+                      help='Output format (console, json, xlsx')
     parser.add_option('--root-path-excluded',
                       action='append', dest='root_paths_excluded',
                       default=['/usr/share/nginx/html',
@@ -85,20 +92,35 @@ def main():
     parser.add_option('--force',
                       action='store_true', dest='force', default=False,
                       help='Ignore lockfile')
+
+    parser.add_option('--sites-json',
+                      action='store', dest='sites_json',
+                      help='Get sites results from json')
+
+    parser.add_option('--xlsx-path',
+                      action='store', dest='xlsx_path',
+                      help='xlsx destination path')
+
     #args = parser.parse_args()
     (args, options) = parser.parse_args()
+
     if 'NO_EMAIL' in os.environ:
         args.no_email = True
-    eprint('get-sites...')
 
     sites = Sites(args)
-    sites.load()
 
-    if args.site_info_generate:
-        sites.site_info_generate()
+    if args.sites_json:
+        with open(args.sites_json) as f:
+            sites.sites = json.load(f)
+    else:
+        eprint('get-sites...')
+        sites.load()
 
-    if args.site_info:
-        sites.site_info_attach()
+        if args.site_info_generate:
+            sites.site_info_generate()
+
+        if args.site_info:
+            sites.site_info_attach()
 
     sites.output()
 
@@ -158,13 +180,7 @@ class Sites:
                     if os.path.exists(root_path + '/' + self.args.excluded_file):
                         continue
 
-                    if not self.args.no_ip:
-                        domain = command_output('get_domain ' + root_path)
-                        domain_idn = domain.strip().decode('utf-8').encode("idna")
-                        try:
-                            domain_ip = socket.gethostbyname(domain_idn)
-                        except socket.gaierror:
-                            domain_ip = 'unknown'
+                    domain = command_output('get_domain ' + root_path)
 
                     site = {
                         'root_path': root_path,
@@ -173,7 +189,7 @@ class Sites:
                         'domain': domain,
                         'email': '' if self.args.no_email else command_output('get-email ' + root_path),
                         'engine': command_output('get-engine ' + root_path),
-                        'domain_on_server': '' if self.args.no_ip else ('1' if domain_ip == server_ip else '0')
+                        'domain_on_server': '' if self.args.no_ip else command_output('domain-on-server ' + domain)
                     }
                     sites.append(site)
         self.sites = sites
@@ -190,6 +206,9 @@ class Sites:
                     print('\t'.join(values))
         elif self.args.output_format == 'json':
             print(json.dumps(self.sites))
+        elif self.args.output_format == 'xlsx':
+            table = XLSTable(self.sites)
+            table.to_excel(self.args.xlsx_path)
 
 
 class CommandRunner:
@@ -246,6 +265,212 @@ class CommandRunner:
         proc = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True)
         (out, err) = proc.communicate()
         return (out, err)
+
+"""
+Собирает таблицу из результатов тестов
+"""
+class XLSTable():
+    def __init__(self, sites):
+        self.sites = sites
+
+    def get_tests(self):
+        tests_config = {}
+
+        paths = [
+            '/etc/site-info.yml',
+            os.path.expanduser('~') + '/site-info.yml'
+        ]
+
+        for path in paths:
+            if os.path.exists(path):
+                with open(path, 'r') as f:
+                    tests_config = yaml.load(f)
+
+        if not tests_config:
+            print("No site-info.yml found, or empty, aborting.")
+            sys.exit(1)
+
+        return tests_config
+
+    """
+    Каждая ячейка должна иметь поля name, result
+    Может быть поле valid
+    """
+    def _excel_sheet_fill(self, sheet, rows, styles={}, row_offset=1):
+        # заполнение всех ячеек
+        for row_idx in range(0, len(rows)):
+            row = rows[row_idx]
+
+            for col_idx in range(0, len(row)):
+                col = row[col_idx]
+                col_letter = get_column_letter(col_idx + 1)
+                cell_name = '%s%s' % (col_letter, row_idx + 1 + row_offset)
+                cell = sheet.cell(cell_name)
+                cell.value = '%s' % (col['result'])
+
+                if 'comment' in col and col['comment']:
+                    cell.comment = Comment(col['comment'], '')
+
+                # стили валидации
+                if 'valid' in col and col['valid'] in styles:
+                    cell.style = styles[col['valid']]
+
+                # без этого некоторые цифры являются строками
+                if isinstance(col['result'], (int, long, float, complex)):
+                    #cell.value = str(col['result'])
+                    cell.data_type = cell.TYPE_NUMERIC
+                    #cell.number_format = '0.00E+00'
+
+                # без этого некоторые цифры являются строками
+                elif isinstance(col['result'], basestring) and col['result'].isdigit():
+                    #cell.value = float(col['result']) if '.' in col['result'] else int(col['result'])
+                    cell.data_type = cell.TYPE_NUMERIC
+
+        #return sheet
+
+    """
+    Афтофильтры, фикс. колонки и прочие красоты
+    """
+
+    def _excel_sheet_tune(self, sheet, style=None):
+        # автофильтр
+        sheet_dimensions_name = 'A1:%s%s' % (get_column_letter(
+            sheet.max_column), sheet.max_row)
+        sheet.auto_filter.ref = sheet_dimensions_name
+
+        # автосуммы
+        sum_row_idx = sheet.max_row + 2
+        sheet['A%s' % sum_row_idx].value = 'totals'
+        for col_idx in range(2, sheet.max_column):
+            cell_letter = get_column_letter(col_idx)
+            cell_name = '%s%s' % (cell_letter, sum_row_idx)
+            cell = sheet.cell(cell_name)
+            column_range_name = '%s%s:%s%s' % (
+                cell_letter, 2, cell_letter, sheet.max_row)
+            cell.value = '=SUM(%s)' % column_range_name
+
+        # ширина
+        sheet.column_dimensions['A'].width = 25
+        sheet.column_dimensions['B'].width = 5
+        for col_idx in range(2, sheet.max_column):
+            cell_letter = get_column_letter(col_idx)
+            sheet.column_dimensions[cell_letter].width = 15
+
+        # фиксированные шапка и первая колонка
+        sheet.freeze_panes = sheet['B2']
+
+        # стиль для всех колонок
+        # if style:
+        #     for col_idx in range(sheet.max_column):
+        #         col_name = get_column_letter(col_idx + 1)
+        #         col_dimensions = sheet.column_dimensions[col_name]
+        #         col_dimensions.style = style
+
+    def to_excel(self, xlsx_path):
+        sites = copy.deepcopy(self.sites)
+        tests_config = self.get_tests()
+        book = Workbook()
+
+        styles = {
+            'default': NamedStyle(
+                name='default', font=Font(name='Courier New', size=10)),
+            'pass': NamedStyle(name='pass',
+                            fill=PatternFill(
+                                fill_type='solid', start_color='C6EFCE', end_color='C6EFCE'),
+                            font=Font(color='006100')
+                        ),
+            'warn': NamedStyle(name='warn',
+                            fill=PatternFill(
+                                fill_type='solid', start_color='FFEB9C', end_color='FFEB9C'),
+                            font=Font(color='9C6500')
+                        ),
+            'fail': NamedStyle(name='fail',
+                            fill=PatternFill(
+                                fill_type='solid', start_color='FFC7CE', end_color='FFC7CE'),
+                            font=Font(color='9C0006')
+                        )
+        }
+        for name,style in styles.iteritems():
+            book.add_named_style(style)
+
+        # Лист "drupals"
+        sheet = book.active
+        sheet.title = 'site-info'
+        rows = []
+
+        # заполнение шапки
+        field_names = []
+        for col_idx, t in enumerate(tests_config['tests']):
+            col_name = get_column_letter(col_idx + 1)
+            field_names.append(t['name'])
+            cell = sheet.cell('%s%s' % (col_name, 1))
+            cell.value = t['name']
+            if 'comment' in t:
+                cell.comment = Comment(t['comment'], '')
+
+            # for test_config in self.tests_config:
+            #     if test_config['name'] == col['name'] and 'comment' in test_config:
+            #         #print 'comment for %s: %s' % (col['name'], test_config['comment'])
+            #         cell.comment = Comment(test_config['comment'], '')
+
+        # в разных сайтах разное кол-во результатов, заполняем пустые значения
+        for site in sites:
+            row = []
+            site_info = site['site_info']
+
+            # site_info
+            named_results = {}
+            for t in site_info:
+                named_results[t['name']] = t
+            for name in field_names:
+                if name in named_results:
+                    row.append(named_results[name])
+                else:
+                    row.append({'result': ''})
+            rows.append(row)
+
+        self._excel_sheet_fill(sheet, rows, styles)
+        self._excel_sheet_tune(sheet, style=styles['default'])
+
+        # листы групп тестов
+        # test_groups = self.get_test_groups()
+        # for test_group in test_groups:
+        #     sheet = book.create_sheet(title=test_group)
+        #     rows = []
+        #     for test_suite in test_suites:
+        #         rows.append(test_suite.get_data(group=test_group))
+
+        #     self._excel_sheet_fill(sheet, rows, styles)
+        #     self._excel_sheet_tune(sheet, style=sheet_style)
+
+        book.save(xlsx_path)
+
+
+    """ not used """
+    # def _list_times(self):
+    #     # Лист "times"
+    #     # Нужен для определения медленных тестов
+    #     sheet = book.create_sheet(title='times')
+    #     rows = []
+    #     for test_suite in test_suites:
+    #         row_data = copy.deepcopy(test_suite.get_data())
+    #         for col_data in row_data:
+    #             if col_data['name'] not in ['domain']:
+    #                 time = col_data['time'] if 'time' in col_data else ''
+    #                 col_data['result'] = time
+    #                 if time == '':
+    #                     col_data['valid'] = None
+    #                 else:
+    #                     if time < 0.5:
+    #                         col_data['valid'] = 'pass'
+    #                     elif time < 2:
+    #                         col_data['valid'] = 'warn'
+    #                     else:
+    #                         col_data['valid'] = 'fail'
+    #         rows.append(row_data)
+
+    #     self._excel_sheet_fill(sheet, rows, styles)
+    #     self._excel_sheet_tune(sheet, style=sheet_style)
 
 
 if __name__ == '__main__':

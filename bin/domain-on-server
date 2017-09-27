@@ -1,0 +1,19 @@
+#!/bin/bash
+
+set -e
+
+cache_file="/tmp/domain_on_server__server_ip"
+
+domain=${1:-$(get_domain)}
+domain_ip="$(dig +short "$domain")"
+
+if [ ! -e "$cache_file" ]; then
+    curl -s "http://ip.jsontest.com/" | cut -d'"' -f4 > "$cache_file"
+fi
+server_ip="$(cat $cache_file)"
+
+if [ "$domain_ip" = "$server_ip" ]; then
+    echo "1"
+else
+    echo "0"
+fi
