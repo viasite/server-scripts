@@ -13,9 +13,9 @@ Usage:
 . /usr/share/server-scripts/lib/init
 use_config_var "DB_BACKUPS_ROOT"
 use_config_var "DB_BACKUPS_LOG"
-#use_config_var "DB_BACKUPS_REMOTE_USER"
-#use_config_var "DB_BACKUPS_REMOTE_HOST"
-#use_config_var "DB_BACKUPS_REMOTE_DIR"
+use_config_var "DB_BACKUPS_REMOTE_USER"
+use_config_var "DB_BACKUPS_REMOTE_HOST"
+use_config_var "DB_BACKUPS_REMOTE_DIR"
 use_config_var "DB_BACKUPS_EXCLUDED_DBS"
 use_config_var "DB_BACKUPS_CLEAN_OLDER_DAYS_TO_ONE"
 use_config_var "DB_BACKUPS_CLEAN_OLDER_DAYS"
@@ -31,6 +31,7 @@ DB_BACKUPS_CLEAN_OLDER_DAYS=${DB_BACKUPS_CLEAN_OLDER_DAYS:-"365"}
 IS_BACKUP=""
 IS_SEND=""
 IS_CLEAN=""
+SEND_REMOTE="${SEND_REMOTE:-""}"
 
 if [ "$1" = "backup" ]; then IS_BACKUP=1
 elif [ "$1" = "send" ]; then IS_SEND=1
@@ -45,10 +46,6 @@ fi
 
 temp_file=$(mktemp -t mysql-backup-XXXX)
 trap 'rm -f "$temp_file"' EXIT
-
-if [ ! -d "$DB_BACKUPS_SEND" ]; then
-	mkdir -p "$DB_BACKUPS_SEND"
-fi
 
 is_excluded_db() {
 	db="$1"
@@ -91,46 +88,41 @@ dump_dbs() {
 }
 
 send_dbs() {
-	# dbs="$1"
-	# for db in $(echo "$dbs"); do
-	# 	last_link="$DB_BACKUPS_LAST/$db.gz"
-	# 	if [ -h "$last_link" ]; then
-	# 		dump_file=$(readlink "$last_link")
-	# 		# echo "$dump_file"
-	# 		dest_file=$(basename $dump_file)
-	# 		dest_path="${DB_BACKUPS_SEND}/${db}_${dest_file}"
-	# 		# echo "$dest_path"
-	#  		cp "$dump_file" "$dest_path"
-			
-	# 	fi
-	# done
-
-	# if [ -z "$DB_BACKUPS_REMOTE_USER" ]; then
-	# 	echo >&2 "DB_BACKUPS_REMOTE_USER not defined in config, aborting"
-	# 	exit 1
-	# fi
-	# if [ -z "$DB_BACKUPS_REMOTE_HOST" ]; then
-	# 	echo >&2 "DB_BACKUPS_REMOTE_HOST not defined in config, aborting"
-	# 	exit 1
-	# fi
-	# if [ -z "$DB_BACKUPS_REMOTE_DIR" ]; then
-	# 	echo >&2 "DB_BACKUPS_REMOTE_DIR not defined in config, aborting"
-	# 	exit 1
-	# fi
-
-	# remote_user_host="${DB_BACKUPS_REMOTE_USER}@${DB_BACKUPS_REMOTE_HOST}"
-	# ssh "$remote_user_host" mkdir -p "$DB_BACKUPS_REMOTE_DIR"
+	if [ -n "$SEND_REMOTE" ]; then
+		if [ -z "$DB_BACKUPS_REMOTE_USER" ]; then
+			echo >&2 "DB_BACKUPS_REMOTE_USER not defined in config, aborting"
+			exit 1
+		fi
+		if [ -z "$DB_BACKUPS_REMOTE_HOST" ]; then
+			echo >&2 "DB_BACKUPS_REMOTE_HOST not defined in config, aborting"
+			exit 1
+		fi
+		if [ -z "$DB_BACKUPS_REMOTE_DIR" ]; then
+			echo >&2 "DB_BACKUPS_REMOTE_DIR not defined in config, aborting"
+			exit 1
+		fi
+		remote_user_host="${DB_BACKUPS_REMOTE_USER}@${DB_BACKUPS_REMOTE_HOST}"
+		ssh "$remote_user_host" mkdir -p "$DB_BACKUPS_REMOTE_DIR"
+	else
+		if [ ! -d "$DB_BACKUPS_SEND" ]; then
+			mkdir -p "$DB_BACKUPS_SEND"
+		fi
+		find "$DB_BACKUPS_SEND/" -type f -exec rm {} \;
+	fi
 
 	dbs="$1"
 	for db in $(echo "$dbs"); do
 		last_link="$DB_BACKUPS_LAST/$db.gz"
 		if [ -h "$last_link" ]; then
 			dump_file=$(readlink "$last_link")
-			# remote_path="${remote_user_host}:${DB_BACKUPS_REMOTE_DIR}/${db}_${dump_file##*/}"
-			# rsync "$dump_file" "$remote_path"
-			dest_file=$(basename $dump_file)
-			dest_path="${DB_BACKUPS_SEND}/${db}_${dest_file}"
-	 		cp "$dump_file" "$dest_path"
+			if [ -n "$SEND_REMOTE" ]; then
+				remote_path="${remote_user_host}:${DB_BACKUPS_REMOTE_DIR}/${db}_${dump_file##*/}"
+				rsync "$dump_file" "$remote_path"
+			else 
+				dest_file=$(basename $dump_file)
+				dest_path="${DB_BACKUPS_SEND}/${db}_${dest_file}"
+				cp "$dump_file" "$dest_path"
+			fi
 		fi
 	done
 }
