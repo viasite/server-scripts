@@ -224,13 +224,13 @@ class CommandRunner:
         eprint(log_str)
 
     def run(self):
-        if not self.lock_check():
-            eprint('Lockfile %s exists and was modified at last %d seconds' %
-                   (self.lock_file_path, self.lock_file_age))
-            if self.force:
-                eprint('But --force flag defined, ignoring lockfile')
-            else:
-                sys.exit(1)
+        # if not self.lock_check():
+        #     eprint('Lockfile %s exists and was modified at last %d seconds' %
+        #            (self.lock_file_path, self.lock_file_age))
+        #     if self.force:
+        #         eprint('But --force flag defined, ignoring lockfile')
+        #     else:
+        #         sys.exit(1)
 
         self.lock_write('sites-info started, total commands: %d' %
                         len(self.commands))
