@@ -44,6 +44,10 @@ else
 	exit 1
 fi
 
+if [ ! -d "$DB_BACKUPS_SEND" ]; then
+	mkdir -p "$DB_BACKUPS_SEND"
+fi
+
 temp_file=$(mktemp -t mysql-backup-XXXX)
 trap 'rm -f "$temp_file"' EXIT
 
@@ -104,9 +108,6 @@ send_dbs() {
 		remote_user_host="${DB_BACKUPS_REMOTE_USER}@${DB_BACKUPS_REMOTE_HOST}"
 		ssh "$remote_user_host" mkdir -p "$DB_BACKUPS_REMOTE_DIR"
 	else
-		if [ ! -d "$DB_BACKUPS_SEND" ]; then
-			mkdir -p "$DB_BACKUPS_SEND"
-		fi
 		find "$DB_BACKUPS_SEND/" -type f -exec rm {} \;
 	fi
 
