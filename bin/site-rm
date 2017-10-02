@@ -75,7 +75,7 @@ if [[ ! $REPLY =~ ^[Yy]$ ]]; then
   exit 1
 fi
 cd ..
-rm -rfv "$root_path"
+rm -rf "$root_path"
 
 # 4. Delete user if no more sites
 if [ "$(find /home/$user/www -mindepth 1 -type d | wc -l)" = 0 ]; then
