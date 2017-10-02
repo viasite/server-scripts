@@ -87,22 +87,25 @@ if [ "$(find /home/$user/www -mindepth 1 -type d | wc -l)" = 0 ]; then
   fi
 
   # 5. Delete php-fpm configs
-  php_fpm_configs="$(grep -R $user /etc | grep php | grep pool.d | grep user | cut -d':' -f1)"
-  if [ -n "$php_fpm_configs" ]; then
-    echo "User have php-fpm configs, you should delete it before user deletion:"
-    echo "$php_fpm_configs"
-    read -p "Delete php-fpm configs (y/n)?" -n 1 -r
-    echo ""
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-      echo "Aborting"
-      exit 1
+  if [ -d "/etc/php" ]; then
+    php_fpm_configs="$(grep -R $user /etc/php | grep pool.d | grep user | cut -d':' -f1)"
+    if [ -n "$php_fpm_configs" ]; then
+      echo "User have php-fpm configs, you should delete it before user deletion:"
+      echo "$php_fpm_configs"
+      read -p "Delete php-fpm configs (y/n)?" -n 1 -r
+      echo ""
+      if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        echo "Aborting"
+        exit 1
+      fi
+
+      echo "$php_fpm_configs" | xargs rm -v
+      reload-web
     fi
-
-    echo "$php_fpm_configs" | xargs rm
-    reload-web
-
-    cd /
-    echo "deluser $user --remove-home"
-    deluser "$user" --remove-home
   fi
-fi
+
+  cd /
+  echo "deluser $user --remove-home"
+  deluser "$user" --remove-home
+
+ fi
