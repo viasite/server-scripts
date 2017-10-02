@@ -35,7 +35,7 @@ if [ -n "$apache" ] && [ -n "$nginx" ]; then
     echo "Aborting"
     exit 1
   fi
-  rm "$nginx" "$apache"
+  rm -v "$nginx" "$apache"
 else
   echo "Site was not enabled."
 fi
@@ -75,7 +75,7 @@ if [[ ! $REPLY =~ ^[Yy]$ ]]; then
   exit 1
 fi
 cd ..
-rm -rf "$root_path"
+rm -rfv "$root_path"
 
 # 4. Delete user if no more sites
 if [ "$(find /home/$user/www -mindepth 1 -type d | wc -l)" = 0 ]; then
@@ -87,7 +87,7 @@ if [ "$(find /home/$user/www -mindepth 1 -type d | wc -l)" = 0 ]; then
   fi
 
   # 5. Delete php-fpm configs
-  php_fpm_configs="$(grep -R $user /etc/php | grep pool.d | grep user | cut -d':' -f1)"
+  php_fpm_configs="$(grep -R $user /etc | grep php | grep pool.d | grep user | cut -d':' -f1)"
   if [ -n "$php_fpm_configs" ]; then
     echo "User have php-fpm configs, you should delete it before user deletion:"
     echo "$php_fpm_configs"
