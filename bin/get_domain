@@ -18,16 +18,17 @@ get_domain() {
 	file=$(grep -R -l "$root_path" /etc/nginx/sites-enabled)
 
 	if [ -z "$file" ]; then
-		echo >&2 "domain not found"
-		exit 1
+		echo >&2 "domain not found, fallback domain by basename"
+		domain="$(basename "$root_path")"
 	elif [ $(echo "$file" | wc -l) != 1 ]; then
 		echo >&2 "found more than 1 config:"
 		echo >&2 "$file"
 		exit 1
+	else
+		domain="$(grep server_name "$file" | tail -1 | awk '{ print $2 }' | sed 's/;//g')"
 	fi
 
-	server_name=$(grep server_name "$file" | tail -1 | awk '{ print $2 }' | sed 's/;//g')
-	decoded_domain=$(echo "$server_name" | tr '[:upper:]' '[:lower:]' | idn -u --quiet)
+	decoded_domain=$(echo "$domain" | tr '[:upper:]' '[:lower:]' | idn -u --quiet)
 	echo "$decoded_domain"
 }
 
