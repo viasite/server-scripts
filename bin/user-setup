@@ -1,10 +1,13 @@
 #!/bin/bash
 
-usage() {
-	echo "Usage: $0 user"
-	echo "www-directory must be www or htdocs,"
-	echo "ex. for /home/user/www you should give command \"$0 user\""
-}
+SCRIPT_HELP="Usage: {0} user
+www-directory must be www or htdocs,
+ex. for /home/user/www you should execute \"{0} user\"
+"
+
+. /usr/share/server-scripts/lib/init
+use_config_var "USER_SETUP_HOMEDIR_MODE" "510"
+use_config_var "USER_SETUP_HOMEDIR_GROUP" ""
 
 if [ $# -lt 1 ]; then
 	usage
@@ -13,8 +16,9 @@ fi
 
 uid="$1"
 gid="$1"
-#nginx_uid="www-data"
 home="/home/$uid"
+home_gid="${USER_SETUP_HOMEDIR_GROUP:-"$uid"}"
+home_mode="$USER_SETUP_HOMEDIR_MODE"
 
 if [ -d "$home/www" ]; then
 	wwwdir="$home/www"
@@ -25,18 +29,20 @@ else
 	exit 1
 fi
 
-
-echo "chown -R $uid.$gid $home"
-chown -R "$uid"."$gid" "$home"
-
+echo "chmod 755 /home/** (directories)"
 find "$home" -type d -exec chmod 755 {} \;
+echo "chmod 644 /home/* (files)"
 find "$home" -type f -exec chmod 644 {} \;
 
-echo "chmod 510 $home"
-chmod 510 "$home"
+echo "chown $uid:$home_gid $home"
+chown "$uid":"$home_gid" "$home"
+echo "chmod $home_mode $home"
+chmod "$home_mode" "$home"
 
-echo "chmod 600 $home/.ssh/authorized_keys"
-chmod 600 "$home/.ssh/authorized_keys"
+if [ -d "$home/.ssh" ]; then
+	echo "chmod 600 $home/.ssh/authorized_keys"
+	chmod 600 "$home/.ssh/authorized_keys"
+fi
 
 #echo "setfacl -m user:$nginx_uid:--x $home $wwwdir"
 #setfacl -m user:www-data:--x $home $wwwdir

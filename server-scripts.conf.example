@@ -69,3 +69,6 @@ SITES_LOAD_LOG_FILE="/var/log/nginx/access.log"
 
 # ssh-add-keys
 SSH_PUBLIC_KEYS_DIR="/root/ssh-public-keys"
+
+USER_SETUP_HOMEDIR_MODE="710"
+USER_SETUP_HOMEDIR_GROUP="www-data"
