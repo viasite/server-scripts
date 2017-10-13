@@ -4,6 +4,13 @@
 
 set -eu
 
+echotitle() {
+    color1='\e[1;37m'
+    color2='\e[0;37m'
+    NC='\e[0m' # No Color
+    echo -e "${color1}${1}${NC}"
+}
+
 if [ $# = 1 ] && [ "$1" = '--help' ]; then
     echo "$0 [disk] [partnumber] [vg] [lv]"
     echo "Example:"
@@ -31,7 +38,8 @@ echo ""
 
 free_space_end="$(echo "print free" | parted $disk | tail -n3 | head -n1 | grep "Free Space" | awk '{print $3}')"
 
-# 1. resize partition
+# 1. resize LVM partition
+echotitle "1. resize LVM partition"
 if [ -n "$free_space_end" ]; then
     disk_size="$(echo 'unit MB print list' | parted 2>/dev/null | grep "Disk /dev/sda" | cut -d' ' -f3 | tr -d MB)"
     echo "$disk size: ${disk_size}MB"
@@ -48,6 +56,7 @@ else
 fi
 
 # 2. resize physical volume (pv)
+echotitle "2. resize LVM physical volume (pv) after resize partition"
 pvs
 echo ""
 read -p "pvresize $disk$part (y/n)? " -n 1 -r
@@ -60,6 +69,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 fi
 
 # 3. resize logical volume
+echotitle "3. resize LVM logical volume (lv)"
 lvs
 echo ""
 lv="/dev/$vg/$default_lv"
@@ -70,6 +80,7 @@ if [ -e "$lv" ]; then
         lvextend -l +100%FREE "$lv"
         echo ""
         # 4. resize partition
+        echotitle "4. resize partition"
         resize2fs "$lv"
         echo ""
         df -h
@@ -81,4 +92,6 @@ if [ -e "$lv" ]; then
             echo "lvextend -l +100%FREE /dev/$vg/$lv && resize2fs /dev/$vg/$lv"
         done
     fi
+else
+    echo "$lv don't exists"
 fi
