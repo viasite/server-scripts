@@ -4,6 +4,13 @@
 
 set -eu
 
+if [ $# = 1 ] && [ "$1" = '--help' ]; then
+    echo "$0 [disk] [partnumber] [vg] [lv]"
+    echo "Example:"
+    echo "$0 /dev/sda 2 vg var"
+    exit 1
+fi
+
 df -h
 echo ""
 
@@ -13,11 +20,6 @@ for device in $(find /sys/class/scsi_device/ -type l); do
 done
 echo ""
 
-if [ $# = 1 ] && [ "$1" = '--help' ]; then
-    echo "$0 [disk] [partnumber] [vg] [lv]"
-    echo "Example:"
-    echo "$0 /dev/sda 2 vg var"
-fi
 disk="${1:-/dev/sda}"
 part="${2:-2}"
 vg_first="$(vgs --noheadings -d | awk '{print $1}' | head -n1)"
