@@ -1,0 +1,82 @@
+#!/bin/bash
+
+# https://github.com/EugenMayer/parted-auto-resize
+
+set -eu
+
+df -h
+echo ""
+
+echo "Rescan SCSI devices"
+for device in $(find /sys/class/scsi_device/ -type l); do
+    echo 1 > "$device/device/rescan"
+done
+echo ""
+
+if [ $# = 1 ] && [ "$1" = '--help' ]; then
+    echo "$0 [disk] [partnumber] [vg] [lv]"
+    echo "Example:"
+    echo "$0 /dev/sda 2 vg var"
+fi
+disk="${1:-/dev/sda}"
+part="${2:-2}"
+vg_first="$(vgs --noheadings -d | awk '{print $1}' | head -n1)"
+vg="${3:-$vg_first}"
+default_lv="${4:-"home"}"
+
+echo "p" | parted "$disk"
+echo ""
+
+free_space_end="$(echo "print free" | parted $disk | tail -n3 | head -n1 | grep "Free Space" | awk '{print $3}')"
+
+# 1. resize partition
+if [ -n "$free_space_end" ]; then
+    disk_size="$(echo 'unit MB print list' | parted 2>/dev/null | grep "Disk /dev/sda" | cut -d' ' -f3 | tr -d MB)"
+    echo "$disk size: ${disk_size}MB"
+    echo "$disk free: $free_space_end"
+
+    read -p "parted $disk resizepart $part $disk_size (y/n)? " -n 1 -r
+    echo ""
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        parted $disk resizepart $part $disk_size
+    fi
+else
+    echo "there are no free space at the end of $disk"
+    echo ""
+fi
+
+# 2. resize physical volume (pv)
+pvs
+echo ""
+read -p "pvresize $disk$part (y/n)? " -n 1 -r
+echo ""
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+    pvresize $disk$part
+    echo ""
+    pvs
+    echo ""
+fi
+
+# 3. resize logical volume
+lvs
+echo ""
+lv="/dev/$vg/$default_lv"
+if [ -e "$lv" ]; then
+    read -p "extend volume $lv to max available size? (y/n)? " -n 1 -r
+    echo ""
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        lvextend -l +100%FREE "$lv"
+        echo ""
+        # 4. resize partition
+        resize2fs "$lv"
+        echo ""
+        df -h
+    else
+        echo ""
+        echo 'You can resize these volumes:'
+        for lv in $(ls -1 /dev/$vg); do
+            echo "$lv:"
+            echo "lvextend -l +100%FREE /dev/$vg/$lv && resize2fs /dev/$vg/$lv"
+        done
+    fi
+fi
