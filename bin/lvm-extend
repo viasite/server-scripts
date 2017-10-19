@@ -45,10 +45,10 @@ if [ -n "$free_space_end" ]; then
     echo "$disk size: ${disk_size}MB"
     echo "$disk free: $free_space_end"
 
-    read -p "parted $disk resizepart $part $disk_size (y/n)? " -n 1 -r
+    read -p "parted $disk resizepart $part 100% (y/n)? " -n 1 -r
     echo ""
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-        parted $disk resizepart $part $disk_size
+        parted $disk resizepart $part 100%
     fi
 else
     echo "there are no free space at the end of $disk"
