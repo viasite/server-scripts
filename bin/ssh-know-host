@@ -1,0 +1,10 @@
+#!/bin/bash
+
+if [ $# != "1" ]; then
+    echo "Usage: $0 'domain'"
+    exit 1
+fi
+
+domain="$(echo $1 | cut -d'@' -f2)"
+ssh-keygen -R "$domain"
+ssh-keyscan -H "$domain" >> ~/.ssh/known_hosts
