@@ -23,21 +23,34 @@ root_path="$PWD"
 
 user="$(get_pwd_user)"
 
-nginx=$(grep -R "root $root_path;" /etc/nginx/sites-enabled | cut -d':' -f1)
-apache=$(grep -R "DocumentRoot $root_path" /etc/apache2/sites-enabled | cut -d':' -f1)
+nginx=$(grep -R "root $root_path;" /etc/nginx/sites-enabled | cut -d':' -f1 | head -n1)
+apache=$(grep -R "DocumentRoot $root_path" /etc/apache2/sites-enabled | cut -d':' -f1 | head -n1)
 
 # 1. Delete apache & nginx configs
 echo ""
-if [ -n "$apache" ] && [ -n "$nginx" ]; then
-  read -p "Delete $nginx and $apache (y/n)? " -n 1 -r
+if [ -e "$nginx" ]; then
+  read -p "Delete $nginx (y/n)? " -n 1 -r
   echo ""
   if [[ ! $REPLY =~ ^[Yy]$ ]]; then
     echo "Aborting"
     exit 1
   fi
-  rm -v "$nginx" "$apache"
+  rm -v "$nginx"
 else
-  echo "Site was not enabled."
+  echo "Site nginx was not enabled."
+fi
+
+echo ""
+if [ -e "$apache" ]; then
+  read -p "Delete $apache (y/n)? " -n 1 -r
+  echo ""
+  if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+    echo "Aborting"
+    exit 1
+  fi
+  rm -v "$apache"
+else
+  echo "Site apache was not enabled."
 fi
 
 # 2. Delete database
@@ -108,4 +121,4 @@ if [ "$(find /home/$user/www -mindepth 1 -type d | wc -l)" = 0 ]; then
   echo "deluser $user --remove-home"
   deluser "$user" --remove-home
 
- fi
+fi
