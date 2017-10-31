@@ -101,7 +101,7 @@ if [ "$(find /home/$user/www -mindepth 1 -type d | wc -l)" = 0 ]; then
 
   # 5. Delete php-fpm configs
   if [ -d "/etc/php" ]; then
-    php_fpm_configs="$(grep -R $user /etc/php | grep pool.d | grep user | cut -d':' -f1)"
+    php_fpm_configs="$(grep -Rx "user = $user" /etc/php | grep pool.d | grep user | cut -d':' -f1)"
     if [ -n "$php_fpm_configs" ]; then
       echo "User have php-fpm configs, you should delete it before user deletion:"
       echo "$php_fpm_configs"
