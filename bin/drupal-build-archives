@@ -84,7 +84,7 @@ main() {
 	for type in $DRUPAL_PROJECTS_TYPES; do
 		type_path="$DRUPAL_PROJECTS_ROOT/$type"
 		if [ ! -d "$type_path" ]; then
-			break
+			continue
 		fi
 		for project_path in $(find $type_path -mindepth 1 -maxdepth 1 -type d 2>/dev/null); do
 			build_project_archive "$project_path"
