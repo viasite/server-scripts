@@ -117,6 +117,20 @@ if [ "$(find /home/$user/www -mindepth 1 -type d | wc -l)" = 0 ]; then
     fi
   fi
 
+  # 6. Delete crontab
+  cron_file="/var/spool/cron/crontabs/$user"
+  if [ -f "$cron_file" ]; then
+    echo "$cron_file:"
+    cat "$cron_file"
+    read -p "Delete $cron_file (y/n)?" -n 1 -r
+    echo ""
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+      echo "Aborting"
+      exit 1
+    fi
+    rm "$cron_file"
+  fi
+
   cd /
   echo "deluser $user --remove-home"
   deluser "$user" --remove-home
