@@ -44,9 +44,12 @@ fi
 # mysqldump "$DBNAME" | gzip > "$FILE"
 
 # полный дамп всех, кроме некоторых таблиц кэша
-mysqldump "$DBNAME" \
+mysqldump "$DBNAME" --single-transaction --quick --skip-lock-tables \
 --ignore-table="$DBNAME".cache \
 --ignore-table="$DBNAME".cache_entity_commerce_product \
+--ignore-table="$DBNAME".cache_entity_comment \
+--ignore-table="$DBNAME".cache_entity_message \
+--ignore-table="$DBNAME".cache_entity_node \
 --ignore-table="$DBNAME".cache_field \
 --ignore-table="$DBNAME".cache_form \
 --ignore-table="$DBNAME".cache_menu \
@@ -55,11 +58,19 @@ mysqldump "$DBNAME" \
 --ignore-table="$DBNAME".cache_path \
 --ignore-table="$DBNAME".cache_views \
 --ignore-table="$DBNAME".cache_views_data \
+--ignore-table="$DBNAME".accesslog \
+--ignore-table="$DBNAME".search_api_db_default_node_index_text \
+--ignore-table="$DBNAME".search_index \
+--ignore-table="$DBNAME".votingapi_cache \
+--ignore-table="$DBNAME".watchdog \
  2>/dev/null | gzip > "$FILE"
 
 # дамп без данных (структура) некоторых таблиц кэша
 mysqldump "$DBNAME" cache --no-data 2>/dev/null | gzip >> "$FILE"
 mysqldump "$DBNAME" cache_entity_commerce_product --no-data 2>/dev/null | gzip >> "$FILE"
+mysqldump "$DBNAME" cache_entity_comment --no-data 2>/dev/null | gzip >> "$FILE"
+mysqldump "$DBNAME" cache_entity_message --no-data 2>/dev/null | gzip >> "$FILE"
+mysqldump "$DBNAME" cache_entity_node --no-data 2>/dev/null | gzip >> "$FILE"
 mysqldump "$DBNAME" cache_field --no-data 2>/dev/null | gzip >> "$FILE"
 mysqldump "$DBNAME" cache_form --no-data 2>/dev/null | gzip >> "$FILE"
 mysqldump "$DBNAME" cache_menu --no-data 2>/dev/null | gzip >> "$FILE"
@@ -68,6 +79,11 @@ mysqldump "$DBNAME" cache_page --no-data 2>/dev/null | gzip >> "$FILE"
 mysqldump "$DBNAME" cache_path --no-data 2>/dev/null | gzip >> "$FILE"
 mysqldump "$DBNAME" cache_views --no-data 2>/dev/null | gzip >> "$FILE"
 mysqldump "$DBNAME" cache_views_data --no-data 2>/dev/null | gzip >> "$FILE"
+mysqldump "$DBNAME" accesslog --no-data 2>/dev/null | gzip >> "$FILE"
+mysqldump "$DBNAME" search_api_db_default_node_index_text --no-data 2>/dev/null | gzip >> "$FILE"
+mysqldump "$DBNAME" search_index --no-data 2>/dev/null | gzip >> "$FILE"
+mysqldump "$DBNAME" votingapi_cache --no-data 2>/dev/null | gzip >> "$FILE"
+mysqldump "$DBNAME" watchdog --no-data 2>/dev/null | gzip >> "$FILE"
 
 ##echo "/root/bin/dbundump $FILE $DBNAME"
 
