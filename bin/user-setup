@@ -29,11 +29,13 @@ else
 	exit 1
 fi
 
-echo "chmod 755 /home/** (directories)"
+echo "chmod 755 $home/** (directories)"
 find "$home" -type d -exec chmod 755 {} \;
-echo "chmod 644 /home/* (files)"
+echo "chmod 644 $home/* (files)"
 find "$home" -type f -exec chmod 644 {} \;
 
+echo "chown -R $uid:$uid $home"
+chown -R "$uid":"$uid" "$home"
 echo "chown $uid:$home_gid $home"
 chown "$uid":"$home_gid" "$home"
 echo "chmod $home_mode $home"
