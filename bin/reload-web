@@ -5,6 +5,9 @@ if command -v apache2 >/dev/null 2>&1; then
 	service apache2 reload && echo "apache: service reloaded" || exit 1
 fi
 
-if command -v php-fpm7.0 >/dev/null 2>&1; then
-	service php7.0-fpm reload && echo "php-fpm: service reloaded" || exit 1
-fi
+for php_version in 5.6 7.0 7.1 7.2; do
+	if command -v "php-fpm${php_version}" >/dev/null 2>&1; then
+		service "php${php_version}-fpm" reload && echo "php${php_version}-fpm: service reloaded" || exit 1
+	fi
+done
+
