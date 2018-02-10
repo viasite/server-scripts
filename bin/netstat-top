@@ -1,0 +1,21 @@
+#!/bin/bash
+
+netstat_group () {
+    col="$1"
+    name="$2"
+    subcol="${3:-1}"
+    echo "connections by $name"
+    echo "netstat -putan | awk '{print\$${col}}' | cut -d':' -f$subcol | sort | uniq -c | sort -nr | head -n10"
+    netstat -putan | awk '{print$'$col'}' | cut -d':' -f$subcol | sort | uniq -c | sort -nr | head -n10
+    echo ""
+}
+
+netstat_group 1 "proto"
+netstat_group 2 "recv-q"
+netstat_group 3 "send-q"
+netstat_group 4 "src host" 1
+netstat_group 4 "src port" 2
+netstat_group 5 "dest host" 1
+netstat_group 5 "dest port" 2
+netstat_group 6 "state"
+netstat_group 7 "pid/program"
