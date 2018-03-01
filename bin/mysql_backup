@@ -116,13 +116,15 @@ send_dbs() {
 		last_link="$DB_BACKUPS_LAST/$db.gz"
 		if [ -h "$last_link" ]; then
 			dump_file=$(readlink "$last_link")
-			if [ -n "$SEND_REMOTE" ]; then
-				remote_path="${remote_user_host}:${DB_BACKUPS_REMOTE_DIR}/${db}_${dump_file##*/}"
-				rsync "$dump_file" "$remote_path"
-			else 
-				dest_file=$(basename $dump_file)
-				dest_path="${DB_BACKUPS_SEND}/${db}_${dest_file}"
-				cp "$dump_file" "$dest_path"
+			if [ -f "$dump_file" ]; then
+				if [ -n "$SEND_REMOTE" ]; then
+					remote_path="${remote_user_host}:${DB_BACKUPS_REMOTE_DIR}/${db}_${dump_file##*/}"
+					rsync "$dump_file" "$remote_path"
+				else 
+					dest_file=$(basename $dump_file)
+					dest_path="${DB_BACKUPS_SEND}/${db}_${dest_file}"
+					cp "$dump_file" "$dest_path"
+				fi
 			fi
 		fi
 	done
