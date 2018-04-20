@@ -30,6 +30,9 @@ Or install [viasite-ansible.zsh](https://github.com/viasite-ansible/ansible-role
 
 # Docs for several scripts
 
+## apt-list-upgraded
+Показывает пакеты, которые будут обновлены, с указанием версий
+
 ## backups-check
 Проверка папок с бекапами на наличие свежих файлов.
 

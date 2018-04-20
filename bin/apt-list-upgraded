@@ -1,0 +1,4 @@
+#!/bin/bash
+
+apt-get upgrade --dry-run | grep Inst | sort | fzf && apt-get upgrade
+
