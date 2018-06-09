@@ -1,0 +1,75 @@
+#!/bin/bash
+#set -eu
+
+log_path="${1:-"/var/log/exim4/mainlog"}"
+errors_user_not_exists=( \
+"user is terminated" \
+"account is disabled" \
+"This account has been disabled" \
+"This user doesn't have a yahoo.com account" \
+"Unknown user" \
+"does not exist" \
+"non-existent hosts" \
+"No such" \
+"user not found" \
+"unknown user account" \
+"User unknown" \
+"Inactive" \
+)
+
+errors_codes=( \
+    " 540 " \
+    " 550 " \
+    " 554 " \
+    "552" \
+)
+
+errors_other=( \
+    "retry time not reached" \
+    "receiving mail at a rate" \
+    "limit exceeded" \
+)
+
+function echo_title() {
+    color1='\e[1;37m'
+    color2='\e[0;37m'
+    NC='\e[0m' # No Color
+    echo -e "${color1}${1}${NC}"
+}
+
+function grep_log() {
+    local args="$@"
+    if [ "$(echo "$log_path" | grep -c ".gz")" != 0 ]; then
+        zcat "$log_path" | grep "$args"
+    else
+        cat "$log_path" | grep "$args"
+    fi
+}
+
+function main() {
+    echo_title "total errors: $(grep_log "\*\*" | wc -l)"
+    echo ""
+
+    echo_title "# user not exists errors:"
+    for err_text in "${errors_user_not_exists[@]}"; do
+        lines="$(grep_log "$err_text")"
+        echo_title "$err_text: $(echo "$lines" | wc -l)"
+    done
+    echo ""
+
+    echo_title "# error codes:"
+    for err_text in "${errors_codes[@]}"; do
+        lines="$(grep_log "$err_text")"
+        echo_title "$err_text: $(echo "$lines" | wc -l)"
+    done
+    echo ""
+
+    echo_title "# other errors:"
+    for err_text in "${errors_other[@]}"; do
+        lines="$(grep_log "$err_text")"
+        echo_title "$err_text: $(echo "$lines" | wc -l)"
+    done
+    echo ""
+}
+
+main "$@"
