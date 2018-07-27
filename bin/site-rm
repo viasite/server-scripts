@@ -91,7 +91,7 @@ cd ..
 rm -rf "$root_path"
 
 # 4. Delete user if no more sites
-if [ "$(find /home/$user/www -mindepth 1 -type d | wc -l)" = 0 ]; then
+if [ "$user" != "root" ] && [ "$(find /home/$user/www -mindepth 1 -type d | wc -l)" = 0 ]; then
   read -p "Directory /home/$user/www is empty. Delete user $user with /home/$user (y/n)?" -n 1 -r
   echo ""
   if [[ ! $REPLY =~ ^[Yy]$ ]]; then
