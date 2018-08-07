@@ -14,25 +14,32 @@ echotitle() {
 if [ $# = 1 ] && [ "$1" = '--help' ]; then
     echo "$0 [disk] [partnumber] [vg] [lv]"
     echo "Example:"
-    echo "$0 /dev/sda 2 vg var"
+    echo "$0 /dev/sda 2 vg data"
     exit 1
 fi
 
+# params
+disk="${1:-/dev/sda}"
+part="${2:-2}"
+vg_first="$(vgs --noheadings -d | awk '{print $1}' | head -n1)"
+vg="${3:-$vg_first}"
+default_lv="${4:-"data"}"
+
+echo "lvm-extend $disk $part $vg $default_lv"
+echo ""
+
+# status
 df -h
 echo ""
 
+# rescan
 echo "Rescan SCSI devices"
 for device in $(find /sys/class/scsi_device/ -type l); do
     echo 1 > "$device/device/rescan"
 done
 echo ""
 
-disk="${1:-/dev/sda}"
-part="${2:-2}"
-vg_first="$(vgs --noheadings -d | awk '{print $1}' | head -n1)"
-vg="${3:-$vg_first}"
-default_lv="${4:-"home"}"
-
+# list partitions
 echo "p" | parted "$disk"
 echo ""
 
