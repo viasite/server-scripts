@@ -88,7 +88,7 @@ if [ -e "$lv" ]; then
         echo ""
         # 4. resize partition
         echotitle "4. resize partition"
-        resize2fs "$lv" || echo "Failed, if you trying to resize XFS partition: xfs_growfs $lv"
+        resize2fs "$lv" || xfs_growfs "$lv" || echo "Failed, if you trying to resize XFS partition: xfs_growfs $lv"
         echo ""
         df -h
     else
