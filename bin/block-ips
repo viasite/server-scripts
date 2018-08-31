@@ -1,0 +1,98 @@
+#!/bin/bash
+# https://tagilcity.planfix.ru/task/571513
+set -eu
+
+log_ips=/root/log/black_ips.log # отсюда берутся плохие айпишники
+log_nginx_input=/var/log/nginx/access.log # отсюда берется лог запросов к серверу
+log_nginx_output=/etc/nginx/block_ips.conf # этот файл инклюдится в конфиг nginx
+log_output=/root/log/block-ips.log # лог вывода работы скрипта
+MODE="${MODE:-ufw}" # or ufw
+
+HELP="
+Скрипт блокирует входящий поток IP адресов на уровне фаервола или nginx.
+
+# Выбор режима:
+MODE=ufw
+- предпочтительный способ
+- добавляет deny правила в фаервол ufw
+- не сработает, если сервер спрятан за прокси, cloudflare или qrator, т.к. на интерфейс приходят запросы от ip прокси
+- это работало на 4000 правил, но вообще для большого количества правил нужно использовать ipset, когда я писал скрипт, я забыл это
+
+MODE=nginx
+- добавляет в файл deny правила для ip
+- подходит для использования в паре с cloudflare
+- для cloudflare надо добавить в nginx подстановку реальных IP в лог - https://support.cloudflare.com/hc/en-us/articles/200170706-How-do-I-restore-original-visitor-IP-with-Nginx-
+- в нужных местах конфига nginx надо добавить include $log_nginx_output;
+
+# Использование:
+
+1. запуск сборщика плохих ip, индивидуален для каждой атаки (запускайте в tmux):
+tail -f $log_nginx_input | grep -v 403 | grep -v 302 | grep -v 444 | grep -v ' 503 ' | grep -e 'POST / ' -e '/? ' -e 'EOF' -e 'POST /special' | awk '{print \$2}' >> $log_ips
+
+2. запуск этого скрипта каждые 10 секунд (запускайте в tmux new-session)
+while true; do; MODE=ufw $0; sleep 10; done
+"
+
+if [ "$#" -gt 0 ] && [ "$1" = "--help" ]; then
+	echo "$HELP"
+	exit 1
+fi
+
+# выводит отфильтрованный и отсортированный список IP из лога
+function ips_from_log () {
+	cat "$1" | sort | uniq | grep -oE "[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+"
+}
+
+# достаем уникальные айпишники и баним всех
+total="$(ips_from_log "$log_ips" | wc -l)"
+if [ "$total" = 0 ]; then
+	exit 0
+fi
+
+i=0
+if [ "$MODE" = "ufw" ]; then
+	for ip in $(ips_from_log "$log_ips"); do
+		i=$((i + 1))
+		echo "block $ip ($i / $total)"
+		# ufw не даст добавить уже добавленный, поэтому с уникальностью можно не заморачиваться
+		ufw deny from $ip to any
+
+		# каждые 10 айпи переставляем в конец разрешающее правило
+		# это нужно, чтобы в случае резкого набега ботов не ждать минуту, пока все правила применятся,
+		# а блокировать их пачками, 10 айпи блокируется секунд за 5, когда правил больше 1000
+		if [ "$((i % 10))" = 0 ]; then
+			ufw delete allow 443 && ufw allow 443
+		fi
+	done
+
+	# нужно переставлять разрешающее правило в конец
+	# чистим лог, чтобы не банить забаненное
+	ufw delete allow 443 && ufw allow 443 && > "$log_ips"
+
+	echo "$(date) block $total ips"
+	echo "$(date) block $total ips" >> "$log_output"
+fi
+
+
+
+if [ "$MODE" = "nginx" ]; then
+	last_ips_count="$(cat "$log_nginx_output" | wc -l)"
+	cat "$log_nginx_output" > /tmp/block_ips_nginx.log
+	for ip in $(ips_from_log "$log_ips"); do
+		i=$((i + 1))
+		#echo "block $ip ($i / $total)"
+		echo "deny $ip;" >> /tmp/block_ips_nginx.log
+	done
+
+	cat /tmp/block_ips_nginx.log | sort | uniq > "$log_nginx_output"
+	rm /tmp/block_ips_nginx.log
+
+	current_ips_count="$(cat "$log_nginx_output" | wc -l)"
+	blocked_ips_count="$((current_ips_count - last_ips_count))"
+
+	if [ "$blocked_ips_count" != 0 ]; then
+		service nginx reload
+		echo "total $total, was $last_ips_count, now $current_ips_count"
+		echo "$(date) block $blocked_ips_count ips, total blocked: $current_ips_count" >> "$log_output"
+	fi
+fi
