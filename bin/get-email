@@ -24,4 +24,7 @@ if [ "$engine" = "drupal" ]; then
 elif [ "$engine" = "joomla" ]; then
     config_file="$root_path/configuration.php"
     grep "mailfrom" "$config_file" | cut -d'=' -f2 | tr -d "\"' ;"
+elif [ "$engine" = "bitrix" ]; then
+    bitrix-sql-option email_from
 fi
+
