@@ -1,13 +1,20 @@
 #!/usr/bin/php
 <?php
-ob_start();
 $_SERVER['DOCUMENT_ROOT'] = getcwd();
-include($_SERVER['DOCUMENT_ROOT'] . '/bitrix/header.php');
-ob_end_clean();
 
-global $DB;
-// $argv = ['', "email_from"];
-$res = $DB->Query("select value from b_option where name='" . $argv[1] . "'");
-$ar = $res->Fetch();
-echo $ar['value'];
+// settings from /bitrix/.settings.php
+$s = include($_SERVER['DOCUMENT_ROOT'] . '/bitrix/.settings.php');
+list($host, $dbname, $user, $password) = [
+    $s['connections']['value']['default']['host'],
+    $s['connections']['value']['default']['database'],
+    $s['connections']['value']['default']['login'],
+    $s['connections']['value']['default']['password'],
+];
+
+$db = new PDO("mysql:host=$host;dbname=$dbname", $user, $password);
+
+$q = $db->prepare("SELECT value FROM b_option where name = ?");
+$q->execute([$argv[1]]);
+$res = $q->fetchColumn();
+echo $res;
 
