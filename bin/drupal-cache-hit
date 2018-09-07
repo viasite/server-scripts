@@ -1,0 +1,55 @@
+#!/bin/bash
+
+
+get_result() {
+	result_type="$1" # HIT or MISS
+	if [ "$result_type" == "HIT" ]; then
+		grep "^$domain" "$logfile" \
+		| grep -v "curl" \
+		| grep -v "admin_menu" \
+		| grep -v "HEAD" \
+		| grep -v "bot" \
+		| grep -v " 301 " \
+		| grep '\( 304 \)\|"HIT"'
+	fi
+
+	if [ "$result_type" == "MISS" ]; then
+		grep "^$domain" "$logfile" \
+		| grep -v "curl" \
+		| grep -v "admin_menu" \
+		| grep -v "HEAD" \
+		| grep -v "bot" \
+		| grep -v ' 301 ' \
+		| grep -v ' 304 ' \
+		| grep -v "HIT"
+	fi
+}
+
+main() {
+	domain="$1"
+	logfile="$2"
+	if [ ! -f "$logfile" ]; then
+		logfile="/var/log/nginx/drupal_cache_hit.log"
+	fi
+
+	hit=$(get_result HIT | wc -l)
+	miss=$(get_result MISS | wc -l)
+	total=$(( $hit + $miss ))
+	if [ $total -gt 0 ]; then
+		percent=$(awk "BEGIN { printf \"%.0f\n\", $hit/$total*100 }")
+	else
+		total=0
+	fi
+
+	echo "HIT: $hit"
+	echo "MISS: $miss"
+	echo "total: $total"
+	echo "percent: $percent"
+}
+
+if [ $# -lt 1 ] || [ "$1" = "--help" ]; then
+	echo "Usage: $0 domain /path/to/log"
+	exit 1
+fi
+
+main "$@"
