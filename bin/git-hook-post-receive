@@ -2,11 +2,18 @@
 # http://blog.popstas.ru/blog/2016/03/02/git-gitlab-planfix-integration/
 
 GIT_PLANFIX_USERS_FILE="/usr/local/etc/git_planfix_users.txt"
+GITLAB_BRANCH_NAME="gitlab"
+GITLAB_PROTOCOL="https"
 PLANFIX_ANALYTIC_NAME="Поминутная работа программиста"
+
+get_task_url() {
+	msg="$1"
+	echo "$msg" | grep -oE "https:\/\/.*\.planfix\.ru\/task\/[0-9]+" | head -n1
+}
 
 get_planfix_email() {
 	msg="$1"
-	task_url=$(echo "$msg" | grep -oE "https:\/\/.*\.planfix\.ru\/task\/[0-9]+" | head -n1)
+	task_url="$(get_task_url "$msg")"
 	if [ -n "$task_url" ]; then
 		domain=$(echo "$task_url" | tail -c +9 | cut -d'/' -f1)
 		task_id=$(echo "$task_url" | grep -oE "[0-9]+$")
@@ -17,13 +24,13 @@ get_planfix_email() {
 }
 
 get_gitlab_url() {
-	is_gitlab="$(git remote show | grep -c "gitlab" )"
+	is_gitlab="$(git remote show | grep -c "$GITLAB_BRANCH_NAME" )"
 	if [ "$is_gitlab" = 1 ]; then
-		gitlab_url=$(git config remote.gitlab.url \
-			| sed 's/^ssh/http/g' \
+		gitlab_url="$(git config remote.${GITLAB_BRANCH_NAME}.url \
+			| sed "s/^ssh/$GITLAB_PROTOCOL/g" \
 			| sed 's/git@//g' \
 			| sed 's/:[0-9][0-9]*//g' \
-			| sed 's/\.git$//g' )
+			| sed 's/\.git$//g' )"
 
 		echo "$gitlab_url"
 	fi
@@ -34,10 +41,8 @@ send_planfix_email() {
 	to="$2"
 	body="$3"
 
-	echo "$body" | mail -s "@commit @nonotify" \
-		-a"Content-Type: text/plain; charset=UTF-8" \
-		-a"From: $from" \
-		"$to"
+	echo "$body" | mail -s "@commit @nonotify" -r "$from" \
+	"$to"
 }
 
 get_planfix_name_by_email() {
@@ -53,27 +58,31 @@ commit_actions() {
 	msg=$(git log --format=%B -n 1 "$sha")
 	from=$(git log --format=%ae -n 1 "$sha")
 	to=$(get_planfix_email "$msg")
+
 	gitlab_url=$(get_gitlab_url)
+	gitlab_commit_url="${gitlab_url}/commit/${sha}"
 
 	author_name=$(get_planfix_name_by_email "$from")
+
+	# add footer delimeter
+	visible_msg="$gitlab_commit_url"
+	delimeter_regex="\n\-\+\-\+\-\n" # -+-+-
+	task_url="$(get_task_url "$msg")"
+	regex="${task_url}"
+	if [ "$(echo "$msg" | grep -c "time:")" -gt 0 ]; then
+		regex="time:"
+	fi
+
+	msg="$(echo "$msg" | sed "s|${regex}|${visible_msg}${delimeter_regex}${regex}|g")"
 
 	if [ -n "$to" ]; then
 		body="$msg
 
-		---
-		commit $(echo "$sha" | head -c 7)
-		"
-
-		if [ -n "$gitlab_url" ]; then
-			body="$body
-
-			${gitlab_url}/commit/${sha}"
-		fi
+		commit $(echo "$sha" | head -c 7)"
 
 		if [ -n "$PLANFIX_ANALYTIC_NAME" ] && [ -n "$author_name" ]; then
 			body="$body
 
-			---
 			Вид работы: $PLANFIX_ANALYTIC_NAME
 			Email: $from
 			Дата: $(date '+%Y-%m-%d')
@@ -99,7 +108,6 @@ main() {
 				revspec=$oval..$nval
 			fi
 			other_branches=$(git for-each-ref --format='%(refname)' refs/heads/ | grep -F -v $ref)
-
 			for revision in `git rev-parse --not $other_branches | git rev-list --stdin $revspec`; do
 				for sha in $(git log --format=%H $revision~1..$revision); do
 					commit_actions "$sha"
