@@ -1,0 +1,45 @@
+#!/bin/bash
+# Скрипт для использования как input plugin для telegraf (exec)
+# Кусок конфига для ansible-role-telegraf:
+# - name: exec
+#   options:
+#     interval: 3600s
+#     commands: ["/usr/local/bin/telegraf-dir-sizes"]
+#     data_format: "influx"
+
+set -eu
+
+measurement="dir_size"
+
+log=$(mktemp "dir-sizes-XXXX")
+trap 'rm -f "$log"' EXIT
+
+dirs=( \
+/var/lib/docker/containers \
+/var/lib/docker/image \
+/var/lib/docker/overlay2 \
+/var/lib/docker/volumes \
+# /var/backups \ # too heavy on some servers
+)
+
+# mysql dirs
+if [ -d "/var/lib/mysql" ]; then
+    for dir in $(find /var/lib/mysql -maxdepth 1 -mindepth 1 -type d); do
+        dir_size="$(du -cs "$dir" | head -n1 | awk '{print $1}')"
+        echo "$dir:$dir_size" >> "$log"
+    done
+fi
+
+# other dirs
+for dir in "${dirs[@]}"; do
+    test -d "$dir" || continue;
+    dir_size=$(du -cs "$dir" | head -n1 | awk '{print $1}')
+    echo "$dir:$dir_size" >> "$log"
+done
+
+# вывод значений в формате influx line protocol
+for line in $(cat "$log"); do
+    dir="$(echo "$line" | cut -d':' -f1)"
+    dir_size="$(echo "$line" | cut -d':' -f2)"
+    echo "$measurement,path=$dir size=${dir_size}000"
+done
