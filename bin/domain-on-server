@@ -6,7 +6,7 @@ cache_file="/tmp/domain_on_server__server_ip"
 
 domain=${1:-$(get_domain)}
 domain_idn="$(echo "$domain" | idn)"
-domain_ip="$(dig +short "$domain_idn")"
+domain_ip="$(dig +short "$domain_idn" | head -n1)"
 
 if [ ! -e "$cache_file" ]; then
     curl -s "http://ip.jsontest.com/" | cut -d'"' -f4 > "$cache_file"
