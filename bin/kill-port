@@ -1,0 +1,3 @@
+#!/bin/bash
+set -eu
+lsof -i tcp:$1 | grep LISTEN | awk '{print $2}' | xargs kill -9
