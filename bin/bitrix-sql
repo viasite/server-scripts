@@ -17,4 +17,3 @@ $q = $db->prepare("$argv[1]");
 $q->execute();
 $res = $q->fetchColumn();
 echo $res;
-

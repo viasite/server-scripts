@@ -1,0 +1,58 @@
+#!/usr/bin/php
+<?php
+define('DRUPAL_ROOT', getcwd());
+define('BITRIX_ROOT', getcwd());
+
+$engine = getEngine();
+
+if ($engine == "drupal") {
+  echo getFromDrupal();
+} elseif($engine == "bitrix") {
+  include_once(BITRIX_ROOT."/bitrix/php_interface/dbconn.php");
+  echo getFromBitrix();
+}
+
+function getEngine() {
+  $ret = false;
+  if (file_exists(DRUPAL_ROOT . '/includes/bootstrap.inc')) {
+    $ret = "drupal";
+  } elseif (file_exists(BITRIX_ROOT."/bitrix/php_interface/dbconn.php")) {
+    $ret = "bitrix";
+  }
+  return $ret;
+}
+
+function getFromDrupal() {
+  $ret = 0;
+  require_once DRUPAL_ROOT . '/includes/bootstrap.inc';
+  drupal_bootstrap(DRUPAL_BOOTSTRAP_DATABASE);
+  $is_table = db_query("SHOW TABLES LIKE 'node'")->fetchAll();
+  if ($is_table) {
+    $changed = db_query("SELECT MAX(changed) FROM {node}")->fetchField();
+    $ret = max($ret, $changed);
+  }
+  $is_table = db_query("SHOW TABLES LIKE 'commerce_product'")->fetchAll();
+  if ($is_table) {
+    $changed = db_query("SELECT MAX(changed) FROM {commerce_product}")->fetchField();
+    $ret = max($ret, $changed);
+  }
+  // print_r(date("Y-m-d", $ret));
+  return $ret;
+}
+
+function getFromBitrix() {
+  $ret = 0;
+  global $DBHost, $DBLogin, $DBPassword, $DBName;
+  $link = new mysqli($DBHost, $DBLogin, $DBPassword, $DBName);
+  $strSql = "SELECT MAX(UNIX_TIMESTAMP(TIMESTAMP_X)) AS ts FROM b_iblock_element";
+  $result = mysqli_query($link, $strSql);
+  if ($result) {
+    $result->fetch_all(MYSQLI_ASSOC);
+    foreach($result as $row) {
+      $ret = $row['ts'];
+    }
+  }
+  mysqli_free_result($result);
+  // print_r(date("Y-m-d", $ret));
+  return $ret;
+}
