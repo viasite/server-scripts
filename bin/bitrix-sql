@@ -1,0 +1,20 @@
+#!/usr/bin/php
+<?php
+$_SERVER['DOCUMENT_ROOT'] = getcwd();
+
+// settings from /bitrix/.settings.php
+$s = include($_SERVER['DOCUMENT_ROOT'] . '/bitrix/.settings.php');
+list($host, $dbname, $user, $password) = [
+    $s['connections']['value']['default']['host'],
+    $s['connections']['value']['default']['database'],
+    $s['connections']['value']['default']['login'],
+    $s['connections']['value']['default']['password'],
+];
+
+$db = new PDO("mysql:host=$host;dbname=$dbname", $user, $password);
+
+$q = $db->prepare("[$argv[1]]");
+$q->execute();
+$res = $q->fetchColumn();
+echo $res;
+
