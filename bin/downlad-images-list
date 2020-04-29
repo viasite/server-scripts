@@ -1,0 +1,25 @@
+#!/bin/bash
+set -eu
+
+if [ "$#" != 3 ]; then
+	echo "Usage: $0 list-file 'http://domain.ru' dest-dir"
+	exit 1
+fi
+
+file="$1"
+domain="$2"
+dest="$3"
+
+for url in $(cat "$file"); do
+	reg="$(echo "$domain" | sed 's|\/|\\\/|g' | sed 's/https:/https?:/' | sed 's/http:/https?:/')"
+	#echo "$reg"
+	url_path="$(echo "$url" | sed "s|$domain||")"
+	#echo "$url_path"
+	dest_path="$(echo $dest/$url_path)"
+	dest_dir="$(dirname "$dest_path")"
+	mkdir -p "$dest_dir"
+	curl "$url" > "$dest_path"
+done
+
+tree "$dest"
+
