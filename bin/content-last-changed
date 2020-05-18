@@ -44,7 +44,7 @@ function getFromBitrix() {
   $ret = 0;
   global $DBHost, $DBLogin, $DBPassword, $DBName;
   $link = new mysqli($DBHost, $DBLogin, $DBPassword, $DBName);
-  $strSql = "SELECT MAX(UNIX_TIMESTAMP(TIMESTAMP_X)) AS ts FROM b_iblock_element";
+  $strSql = "SELECT MAX(UNIX_TIMESTAMP(TIMESTAMP_X)) AS ts FROM b_iblock_element WHERE name not like '%форм%'";
   $result = mysqli_query($link, $strSql);
   if ($result) {
     $result->fetch_all(MYSQLI_ASSOC);
