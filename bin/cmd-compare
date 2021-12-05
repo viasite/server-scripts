@@ -1,0 +1,31 @@
+#!/bin/bash
+
+# Execute command twice, show diff in vim
+# Examples:
+# cmd-compare date
+# cmd-compare df -h
+# cmd-compare lsusb
+
+set -e
+
+cmd="$@"
+out1=$(mktemp -t cmd-compare-XXXX)
+out2=$(mktemp -t cmd-compare-XXXX)
+trap 'rm -f "$out1" "$out2"' EXIT
+
+function title() {
+    color1='\e[1;37m'
+    NC='\e[0m'
+    echo -e "\n${color1}${1}${NC}"
+}
+
+title "$cmd"
+$cmd | tee -a "$out1"
+
+echo ""
+read -p "Press enter to repeat"
+
+title "$cmd"
+$cmd | tee -a "$out2"
+
+vimdiff "$out1" "$out2"
