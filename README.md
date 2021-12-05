@@ -49,6 +49,15 @@ BACKUPS_CHECK_DIRS=( \
 )
 ```
 
+## cmd-compare
+Execute command twice, show diff in vim
+
+Examples:
+
+- `cmd-compare date`
+- `cmd-compare df -h`
+- `cmd-compare lsusb`
+
 
 ## get-sites
 Список сайтов на хостинге, домены, email адреса.
